@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, AlertTriangle, Clock } from "lucide-react";
+import BottomTabBar from "@/components/BottomTabBar";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -51,8 +52,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background px-6 py-8">
-      <div className="w-full max-w-md mx-auto space-y-6">
+    <div className="min-h-screen bg-background pb-20">
+      <div className="w-full max-w-md mx-auto px-6 py-8 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
@@ -128,6 +129,8 @@ const Dashboard = () => {
           ))}
         </div>
       </div>
+      
+      <BottomTabBar />
     </div>
   );
 };

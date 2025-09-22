@@ -10,6 +10,8 @@ import Login from "./pages/Login";
 import VerifyEmail from "./pages/VerifyEmail";
 import Preferences from "./pages/Preferences";
 import Dashboard from "./pages/Dashboard";
+import Portfolio from "./pages/Portfolio";
+import Market from "./pages/Market";
 import AlertDetails from "./pages/AlertDetails";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +31,8 @@ const App = () => (
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/preferences" element={<Preferences />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/market" element={<Market />} />
           <Route path="/alert/:id" element={<AlertDetails />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
