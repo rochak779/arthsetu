@@ -35,10 +35,43 @@ const VerifyEmail = () => {
   }, []);
 
   const handleContinue = async () => {
-    // Refresh the Supabase auth session manually
+    // Get current authenticated user
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (user?.email_confirmed_at) {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "No authenticated user found.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check email verification from users table
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('email_verifiedat')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to check verification status.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // If auth user is verified but users table isn't updated, update it
+    if (user.email_confirmed_at && !userData.email_verifiedat) {
+      await supabase
+        .from('users')
+        .update({ email_verifiedat: user.email_confirmed_at })
+        .eq('user_id', user.id);
+      
+      navigate("/preferences");
+    } else if (userData.email_verifiedat) {
       navigate("/preferences");
     } else {
       toast({

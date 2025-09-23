@@ -45,18 +45,21 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string
+          email_verifiedat: string | null
           full_name: string
           user_id: string
         }
         Insert: {
           created_at?: string | null
           email: string
+          email_verifiedat?: string | null
           full_name: string
           user_id: string
         }
         Update: {
           created_at?: string | null
           email?: string
+          email_verifiedat?: string | null
           full_name?: string
           user_id?: string
         }
