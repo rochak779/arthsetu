@@ -62,7 +62,7 @@ ip_version = "ipv4"
 verify_jwt = false
 
 [functions.kite-callback]
-verify_jwt = false
+verify_jwt = true
 
 [functions.kite-holdings]
 verify_jwt = true

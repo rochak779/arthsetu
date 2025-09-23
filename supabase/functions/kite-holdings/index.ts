@@ -1,3 +1,4 @@
+// @ts-nocheck
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -14,40 +15,73 @@ serve(async (req) => {
   }
 
   try {
-    let userId;
-    
-    // Handle both GET and POST requests
-    if (req.method === 'GET') {
-      const url = new URL(req.url);
-      userId = url.searchParams.get('user_id');
-    } else if (req.method === 'POST') {
-      const body = await req.json();
-      userId = body.user_id;
-    }
-
-    console.log('Kite holdings function invoked for user:', userId);
-
-    if (!userId) {
-      console.error('User ID is required but not provided');
-      return new Response(JSON.stringify({ error: 'User ID is required' }), {
-        status: 400,
+    // Require an authenticated request (verify_jwt is enabled in config)
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No Authorization header found');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Initialize Supabase client
+    // Initialize Supabase clients: one for auth (anon key) and one for DB writes (service role)
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const kiteApiKey = Deno.env.get('KITE_API_KEY');
+
+    console.log('Env presence check (kite-holdings):', {
+      supabaseUrl: !!supabaseUrl,
+      supabaseAnonKey: !!supabaseAnonKey,
+      supabaseServiceKey: !!supabaseServiceKey,
+      kiteApiKey: !!kiteApiKey,
+    });
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      console.error('Supabase environment variables are not fully configured');
+      return new Response(JSON.stringify({ error: 'Service configuration error' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (!kiteApiKey) {
+      console.error('Kite API key not configured');
+      return new Response(JSON.stringify({ error: 'Kite API key not configured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Derive the user ID from the Supabase session (ignore any user_id passed in body/query)
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    if (userError || !user) {
+      console.error('Failed to get user from session in kite-holdings:', userError?.message);
+      return new Response(JSON.stringify({ error: 'Invalid or expired session' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userId = user.id;
+    console.log('Kite holdings function invoked for authenticated user:', userId);
+
+    // Initialize Supabase client
+    // (already initialized above)
+
     // Get user's access token
-    const { data: userData, error: userError } = await supabase
+    const { data: userData, error: dbUserError } = await supabase
       .from('users')
       .select('kite_accesstoken')
       .eq('user_id', userId)
       .single();
 
-    if (userError || !userData?.kite_accesstoken) {
+    if (dbUserError || !userData?.kite_accesstoken) {
       return new Response(JSON.stringify({ 
         error: 'User not found or no Kite access token available' 
       }), {
@@ -60,7 +94,8 @@ serve(async (req) => {
     const holdingsResponse = await fetch('https://api.kite.trade/portfolio/holdings', {
       method: 'GET',
       headers: {
-        'Authorization': `token ${userData.kite_accesstoken}`,
+        // Kite Connect requires: token <api_key>:<access_token>
+        'Authorization': `token ${kiteApiKey}:${userData.kite_accesstoken}`,
         'X-Kite-Version': '3',
       },
     });
@@ -135,9 +170,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in kite-holdings function:', error);
+    const err = error as any;
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      details: error.message
+      details: err?.message
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

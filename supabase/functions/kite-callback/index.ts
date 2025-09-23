@@ -1,3 +1,4 @@
+// @ts-nocheck
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -319,15 +320,17 @@ serve(async (req) => {
       });
     }
 
-    // Store access token in users table with comprehensive error handling
+    // Ensure a users row exists, then upsert access token
     console.log('Storing access token for user:', user_id);
-    const { error: updateError } = await supabase
+    // Try update first
+    const { data: updateData, error: updateError } = await supabase
       .from('users')
       .update({
         kite_accesstoken: accessToken,
         last_login_date: new Date().toISOString()
       })
-      .eq('user_id', user_id);
+      .eq('user_id', user_id)
+      .select('user_id');
 
     if (updateError) {
       console.error('Database update error details:', updateError);
@@ -342,28 +345,70 @@ serve(async (req) => {
       });
     }
 
+    if (!updateData || updateData.length === 0) {
+      // No row updated: insert a new users row with minimal info (email may be unknown here)
+      // We'll fetch the user's profile from auth to get email
+      const supabaseUrlForAuth = Deno.env.get('SUPABASE_URL');
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+      if (!supabaseUrlForAuth || !supabaseAnonKey) {
+        console.error('Supabase auth env vars missing when attempting to insert users row');
+        return new Response(JSON.stringify({ 
+          error: 'Service configuration error'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const supabaseAuth = createClient(supabaseUrlForAuth, supabaseAnonKey, {
+        global: { headers: { Authorization: req.headers.get('Authorization') || '' } },
+      });
+      const { data: { user: authUser } } = await supabaseAuth.auth.getUser();
+      const email = authUser?.email || null;
+      const fullName = (authUser?.user_metadata as any)?.full_name || null;
+
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          user_id: user_id,
+          full_name: fullName ?? 'Unknown',
+          email: email ?? 'unknown@example.com',
+          kite_accesstoken: accessToken,
+          last_login_date: new Date().toISOString(),
+        });
+
+      if (insertError) {
+        console.error('Database insert error details:', insertError);
+        return new Response(JSON.stringify({ 
+          error: 'Failed to create user profile for token storage',
+          details: insertError.message,
+          code: insertError.code,
+          hint: insertError.hint
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
     console.log('Access token stored successfully for user:', user_id);
 
-    // Return success with redirect information for frontend
-    const frontendUrl = Deno.env.get('SUPABASE_URL')?.replace('/functions/v1', '') || 'http://localhost:3000';
-    const redirectUrl = `${frontendUrl.replace('.supabase.co', '.lovableproject.com')}/portfolio?kite_connected=true`;
-
+    // Return success; frontend handles navigation
     return new Response(JSON.stringify({ 
       status: 'success',
       user_id: user_id,
-      message: 'Kite account connected successfully',
-      redirect_url: redirectUrl
+      message: 'Kite account connected successfully'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Critical error in kite-callback function:', error);
-    console.error('Error stack:', error.stack);
+    const err = error as any;
+    console.error('Error stack:', err?.stack);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      details: error.message,
-      type: error.name,
+      details: err?.message,
+      type: err?.name,
       timestamp: new Date().toISOString()
     }), {
       status: 500,
