@@ -16,7 +16,35 @@ serve(async (req) => {
 
   try {
     console.log('Kite callback function invoked');
-    const { request_token, user_id } = await req.json();
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+    
+    let request_token, user_id;
+    
+    // Handle the callback from Kite (likely GET request with query params)
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      request_token = url.searchParams.get('request_token');
+      user_id = url.searchParams.get('state'); // Kite sends user_id as 'state' parameter
+      console.log('GET request - request_token:', request_token, 'state (user_id):', user_id);
+    } else if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        request_token = body.request_token;
+        user_id = body.user_id;
+        console.log('POST request - parsed body successfully');
+      } catch (jsonError) {
+        console.error('Failed to parse JSON body:', jsonError);
+        return new Response(JSON.stringify({ 
+          error: 'Invalid JSON in request body',
+          details: jsonError.message
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+    
     console.log('Received callback for user:', user_id, 'with token:', request_token ? 'present' : 'missing');
 
     if (!request_token || !user_id) {
@@ -51,6 +79,7 @@ serve(async (req) => {
     const checksum = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     // Exchange request token for access token
+    console.log('Making token exchange request to Kite API...');
     const tokenResponse = await fetch('https://api.kite.trade/session/token', {
       method: 'POST',
       headers: {
@@ -63,21 +92,42 @@ serve(async (req) => {
         checksum: checksum,
       }),
     });
-
+    
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error('Kite token exchange failed:', errorText);
+      console.error('Kite token exchange failed with status:', tokenResponse.status);
+      console.error('Kite error response:', errorText);
       return new Response(JSON.stringify({ 
         error: 'Failed to exchange token',
-        details: errorText
+        details: errorText,
+        status: tokenResponse.status
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const tokenData = await tokenResponse.json();
-    const accessToken = tokenData.data.access_token;
+    console.log('Token exchange successful, parsing response...');
+    const responseText = await tokenResponse.text();
+    console.log('Raw response from Kite:', responseText);
+    
+    let tokenData;
+    try {
+      tokenData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse Kite response as JSON:', parseError);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid JSON response from Kite API',
+        details: parseError.message,
+        raw_response: responseText
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    console.log('Parsed token data:', tokenData);
+    const accessToken = tokenData?.data?.access_token;
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

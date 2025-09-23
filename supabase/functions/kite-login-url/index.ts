@@ -49,10 +49,11 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const callbackUrl = `${supabaseUrl}/functions/v1/kite-callback`;
 
-    // Generate Kite login URL
-    const loginUrl = `https://kite.zerodha.com/connect/login?api_key=${kiteApiKey}&v=3`;
+    // Generate Kite login URL with state parameter (user_id for callback)
+    const loginUrl = `https://kite.zerodha.com/connect/login?api_key=${kiteApiKey}&v=3&state=${userId}`;
 
     console.log('Generated Kite login URL for user:', userId);
+    console.log('Callback URL:', callbackUrl);
 
     return new Response(JSON.stringify({ 
       login_url: loginUrl,
