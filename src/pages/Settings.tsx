@@ -47,38 +47,68 @@ const Settings = () => {
     try {
       console.log('Settings: Starting fetchUserData');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      console.log('Settings: getSession result:', { hasSession: !!session, sessionError });
+      console.log('Settings: getSession result:', { hasSession: !!session, sessionError, userId: session?.user?.id });
 
       if (sessionError) {
         console.error('Settings: getSession error:', sessionError);
-        // Don't redirect, just show we couldn't get session data
+        toast({
+          title: "Session Error",
+          description: "Could not verify your login status",
+          variant: "destructive",
+        });
         return;
       }
 
       if (!session?.user) {
-        console.log('Settings: No active session - showing logged out state');
-        // Don't redirect, just show that user needs to login
+        console.log('Settings: No active session found');
+        toast({
+          title: "Not Logged In",
+          description: "Please log in to view your settings",
+          variant: "destructive",
+        });
         return;
       }
 
       const userId = session.user.id;
-      console.log('Settings: User ID:', userId);
+      console.log('Settings: User ID from session:', userId);
 
-      
-
-      // Fetch user profile
+      // Fetch user profile with detailed logging
+      console.log('Settings: Fetching user profile from database...');
       const { data: profileData, error: profileError } = await supabase
         .from('users')
         .select('full_name, email, kite_accesstoken')
         .eq('user_id', userId)
         .maybeSingle();
 
-      console.log('Settings: Profile fetch result:', { profileData, profileError });
+      console.log('Settings: Profile fetch result:', { 
+        profileData, 
+        profileError,
+        hasData: !!profileData,
+        email: profileData?.email 
+      });
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
-        // Don't fail completely, just show empty profile
+        toast({
+          title: "Database Error", 
+          description: `Could not load profile: ${profileError.message}`,
+          variant: "destructive",
+        });
+      } else if (!profileData) {
+        console.log('Settings: No profile found in database for user:', userId);
+        toast({
+          title: "Profile Not Found",
+          description: "Your profile was not found. Please contact support.",
+          variant: "destructive",
+        });
+        // Set a minimal profile so the page doesn't show login prompt
+        setUserProfile({
+          full_name: session.user.email?.split('@')[0] || 'User',
+          email: session.user.email || 'No email',
+          kite_accesstoken: null
+        });
       } else {
+        console.log('Settings: Profile loaded successfully:', profileData);
         setUserProfile(profileData);
       }
 
