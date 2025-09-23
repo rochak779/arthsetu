@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-const API_BASE = "https://ideationally-bacterioscopic-hiroko.ngrok-free.dev";
+
 
 interface CallbackResponse {
   status: string;
@@ -51,118 +51,38 @@ const KiteCallback = () => {
           return;
         }
 
-        // Step 1: Exchange request token for access token
-        const callbackResponse = await fetch(
-          `${API_BASE}/kite/callback?request_token=${requestToken}&user_id=${user.id}`,
-          {
-            headers: { 
-              'ngrok-skip-browser-warning': 'true',
-              'accept': 'application/json'
-            }
+        // Step 1: Exchange request token for access token using Supabase Edge Function
+        const { data: callbackData, error: callbackError } = await supabase.functions.invoke('kite-callback', {
+          body: {
+            request_token: requestToken,
+            user_id: user.id
           }
-        );
+        });
 
-        if (!callbackResponse.ok) {
-          const errorText = await callbackResponse.text();
-          let errorMsg = "Token exchange failed";
-          
-          if (callbackResponse.status === 422) {
-            errorMsg = "Validation error - invalid request token";
-          } else if (callbackResponse.status === 400) {
-            errorMsg = "Missing user ID or invalid state";
-          } else if (callbackResponse.status >= 500) {
-            errorMsg = "Temporary server error. Please try again.";
-          }
-          
+        if (callbackError || !callbackData) {
           setStatus('error');
-          setErrorMessage(errorMsg);
+          setErrorMessage(callbackError?.message || 'Token exchange failed');
           setLoading(false);
           return;
         }
 
-        const callbackData: CallbackResponse = await callbackResponse.json();
-        
-        if (callbackData.status !== 'ok') {
+        if (callbackData.status !== 'success') {
           setStatus('error');
           setErrorMessage('Token exchange failed');
           setLoading(false);
           return;
         }
 
-        // Store the access token in users table if provided
-        if (callbackData.access_token) {
-          const { error: tokenUpdateError } = await supabase
-            .from('users')
-            .update({
-              kite_accesstoken: callbackData.access_token,
-              last_login_date: new Date().toISOString()
-            })
-            .eq('user_id', user.id);
-
-          if (tokenUpdateError) {
-            console.error('Error storing access token:', tokenUpdateError);
-            setStatus('error');
-            setErrorMessage('Failed to store access token');
-            setLoading(false);
-            return;
-          }
-        }
-
         // Step 2: Fetch holdings using the access token
-        const holdingsResponse = await fetch(
-          `${API_BASE}/kite/holdings?user_id=${user.id}`,
-          {
-            headers: { 
-              'ngrok-skip-browser-warning': 'true',
-              'accept': 'application/json'
-            }
-          }
-        );
+        const { data: holdingsData, error: holdingsError } = await supabase.functions.invoke('kite-holdings', {
+          body: { user_id: user.id }
+        });
 
-        if (!holdingsResponse.ok) {
-          setStatus('error');
-          setErrorMessage('Failed to fetch holdings from Kite');
-          setLoading(false);
-          return;
-        }
-
-        const holdingsData: HoldingsResponse = await holdingsResponse.json();
-
-        // Step 3: Save holdings to Supabase
-        if (holdingsData.holdings && holdingsData.holdings.length > 0) {
-          // Clear existing holdings for this user
-          await supabase
-            .from('kite_holdings')
-            .delete()
-            .eq('user_id', user.id);
-
-          // Insert new holdings
-          const holdingsToInsert = holdingsData.holdings.map(holding => ({
-            user_id: user.id,
-            instrument_token: holding.instrument_token,
-            exchange: holding.exchange,
-            tradingsymbol: holding.tradingsymbol,
-            product: holding.product,
-            quantity: holding.quantity,
-            average_price: holding.average_price,
-            last_price: holding.last_price,
-            pnl: holding.pnl,
-            collateral_quantity: holding.collateral_quantity || 0,
-            t1_quantity: holding.t1_quantity || 0,
-            raw: holding
-          }));
-
-          const { error: insertError } = await supabase
-            .from('kite_holdings')
-            .insert(holdingsToInsert);
-
-          if (insertError) {
-            console.error('Error saving holdings to Supabase:', insertError);
-            setStatus('error');
-            setErrorMessage('Failed to save holdings to database');
-            setLoading(false);
-            return;
-          }
+        if (holdingsError) {
+          console.error('Error fetching holdings:', holdingsError);
+          // Don't fail the entire process if holdings fetch fails
+        } else if (holdingsData?.status === 'success') {
+          console.log(`Successfully fetched ${holdingsData.holdings_count || 0} holdings`);
         }
 
         // Access token and last login date already updated above

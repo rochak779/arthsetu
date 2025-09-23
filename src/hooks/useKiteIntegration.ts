@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-const API_BASE = "https://ideationally-bacterioscopic-hiroko.ngrok-free.dev";
-
 interface LoginUrlResponse {
   login_url: string;
 }
@@ -22,19 +20,14 @@ export const useKiteIntegration = () => {
         throw new Error('User not authenticated');
       }
 
-      // Get Kite login URL
-      const loginUrlResponse = await fetch(`${API_BASE}/kite/login-url?user_id=${userId}`, {
-        headers: { 
-          'ngrok-skip-browser-warning': 'true',
-          'accept': 'application/json'
-        }
+      // Get Kite login URL from Supabase Edge Function
+      const { data: loginData, error: loginError } = await supabase.functions.invoke('kite-login-url', {
+        body: { user_id: userId }
       });
 
-      if (!loginUrlResponse.ok) {
-        throw new Error('Failed to get login URL');
+      if (loginError || !loginData) {
+        throw new Error(loginError?.message || 'Failed to get login URL');
       }
-
-      const loginData: LoginUrlResponse = await loginUrlResponse.json();
       
       if (!loginData.login_url) {
         throw new Error('No login URL received');
