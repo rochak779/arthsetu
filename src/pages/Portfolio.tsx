@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BottomTabBar from "@/components/BottomTabBar";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 const Portfolio = () => {
   const portfolioData = {
@@ -51,12 +52,21 @@ const Portfolio = () => {
   ];
 
   const sectorData = [
-    { sector: "Technology", percentage: 65, color: "bg-tertiary" },
+    { sector: "Technology", percentage: 65, color: "bg-primary" },
     { sector: "Healthcare", percentage: 20, color: "bg-accent" },
     { sector: "Finance", percentage: 15, color: "bg-warning" }
   ];
 
   const timeFilters = ["1D", "1W", "1M", "1Y", "All"];
+
+  const chartData = [
+    { date: "Jan", value: 100000 },
+    { date: "Feb", value: 105000 },
+    { date: "Mar", value: 110000 },
+    { date: "Apr", value: 108000 },
+    { date: "May", value: 115000 },
+    { date: "Jun", value: 125840 }
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -129,12 +139,37 @@ const Portfolio = () => {
               ))}
             </div>
 
-            {/* Performance Chart Placeholder */}
+            {/* Performance Chart */}
             <Card className="bg-card border-border">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4">Portfolio Performance</h3>
-                <div className="h-48 bg-muted/20 rounded-lg flex items-center justify-center">
-                  <p className="text-secondary">Performance chart coming soon</p>
+                <div className="h-48">
+                  <LineChart width={300} height={180} data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "6px"
+                      }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="value" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
                 </div>
               </CardContent>
             </Card>
@@ -150,7 +185,7 @@ const Portfolio = () => {
                         <div className={`w-4 h-4 rounded ${sector.color}`}></div>
                         <span className="text-foreground">{sector.sector}</span>
                       </div>
-                      <span className="text-secondary font-medium">{sector.percentage}%</span>
+                      <span className="text-muted-foreground font-medium">{sector.percentage}%</span>
                     </div>
                   ))}
                 </div>

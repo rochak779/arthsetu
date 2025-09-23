@@ -38,7 +38,7 @@ const Market = () => {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-bold text-foreground">{stock}</h3>
-            <p className="text-sm text-[#B0B0B0]">₹{price.toFixed(2)}</p>
+            <p className="text-sm text-muted-foreground">₹{price.toFixed(2)}</p>
           </div>
           <div className={`flex items-center gap-1 ${change > 0 ? 'text-primary' : 'text-destructive'}`}>
             {change > 0 ? 
@@ -76,7 +76,7 @@ const Market = () => {
           </div>
           <div className="text-right">
             <h1 className="text-xl font-bold text-foreground">Market</h1>
-            <p className="text-white">Stay updated with market trends</p>
+            <p className="text-foreground">Stay updated with market trends</p>
           </div>
         </div>
 
@@ -88,12 +88,12 @@ const Market = () => {
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <p className="text-sm text-[#B0B0B0]">NIFTY 50</p>
+                <p className="text-sm text-muted-foreground">NIFTY 50</p>
                 <p className="text-xl font-bold text-foreground">19,674.25</p>
                 <p className="text-primary text-sm font-semibold">+1.45%</p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-[#B0B0B0]">SENSEX</p>
+                <p className="text-sm text-muted-foreground">SENSEX</p>
                 <p className="text-xl font-bold text-foreground">65,834.10</p>
                 <p className="text-primary text-sm font-semibold">+1.28%</p>
               </div>
@@ -103,10 +103,10 @@ const Market = () => {
 
         {/* Market Sections */}
         <div className="space-y-8">
+          <MarketSection title="Watchlist" stocks={watchlist} />
           <MarketSection title="Top Gainers" stocks={topGainers} />
           <MarketSection title="Top Losers" stocks={topLosers} />
           <MarketSection title="Nifty 50" stocks={nifty50} />
-          <MarketSection title="Watchlist" stocks={watchlist} />
         </div>
       </div>
       

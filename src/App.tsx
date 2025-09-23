@@ -12,6 +12,7 @@ import Preferences from "./pages/Preferences";
 import Dashboard from "./pages/Dashboard";
 import Portfolio from "./pages/Portfolio";
 import Market from "./pages/Market";
+import Settings from "./pages/Settings";
 import AlertDetails from "./pages/AlertDetails";
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/market" element={<Market />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/alert/:id" element={<AlertDetails />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
