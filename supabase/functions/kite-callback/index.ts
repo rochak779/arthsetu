@@ -186,10 +186,10 @@ serve(async (req) => {
     const kiteApiSecret = Deno.env.get('KITE_API_SECRET');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    console.log('Environment variables check for token exchange:');
-    console.log('- KITE_API_KEY:', !!kiteApiKey);
-    console.log('- KITE_API_SECRET:', !!kiteApiSecret);
-    console.log('- SUPABASE_SERVICE_ROLE_KEY:', !!supabaseServiceKey);
+  console.log('Environment variables check for token exchange:');
+  console.log('- KITE_API_KEY:', !!kiteApiKey);
+  console.log('- KITE_API_SECRET:', !!kiteApiSecret);
+  console.log('- SUPABASE_SERVICE_ROLE_KEY:', !!supabaseServiceKey);
 
     // Validate environment variables for token exchange
     if (!kiteApiKey || !kiteApiSecret) {
@@ -300,6 +300,7 @@ serve(async (req) => {
     }
     
     const accessToken = tokenData.data.access_token;
+    console.log('Access token extracted successfully, length:', accessToken.length);
     console.log('Access token extracted successfully, length:', accessToken.length);
 
     // Initialize Supabase client with error handling

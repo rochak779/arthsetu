@@ -98,6 +98,7 @@ export type Database = {
           email: string
           email_verifiedat: string | null
           full_name: string
+          kite_api_key: string | null
           kite_accesstoken: string | null
           last_login_date: string | null
           user_id: string
@@ -107,6 +108,7 @@ export type Database = {
           email: string
           email_verifiedat?: string | null
           full_name: string
+          kite_api_key?: string | null
           kite_accesstoken?: string | null
           last_login_date?: string | null
           user_id: string
@@ -116,6 +118,7 @@ export type Database = {
           email?: string
           email_verifiedat?: string | null
           full_name?: string
+          kite_api_key?: string | null
           kite_accesstoken?: string | null
           last_login_date?: string | null
           user_id?: string

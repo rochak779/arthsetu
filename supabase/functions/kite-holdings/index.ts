@@ -91,11 +91,24 @@ serve(async (req) => {
     }
 
     // Fetch holdings from Kite API
+  // Normalize api_key and access token (strip quotes and trim spaces)
+  const keyToUse = kiteApiKey ? kiteApiKey.trim().replace(/^\"|\"$/g, '') : '';
+    const accessTokenRaw = userData.kite_accesstoken as string;
+    const accessToken = accessTokenRaw ? accessTokenRaw.trim().replace(/^"|"$/g, '') : '';
+
+    // Masked diagnostics
+    console.log('Kite holdings header parts check:', {
+      api_key_present: !!keyToUse,
+      access_token_present: !!accessToken,
+      api_key_preview: keyToUse ? `${keyToUse.slice(0, 4)}****` : 'none',
+      access_token_preview: accessToken ? `****${accessToken.slice(-4)}` : 'none',
+    });
+
     const holdingsResponse = await fetch('https://api.kite.trade/portfolio/holdings', {
       method: 'GET',
       headers: {
         // Kite Connect requires: token <api_key>:<access_token>
-        'Authorization': `token ${kiteApiKey}:${userData.kite_accesstoken}`,
+        'Authorization': `token ${keyToUse}:${accessToken}`,
         'X-Kite-Version': '3',
       },
     });
