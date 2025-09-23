@@ -80,7 +80,7 @@ serve(async (req) => {
     }
     
     // Handle POST requests (token exchange and storage)
-    if (req.method === 'POST') {
+    else if (req.method === 'POST') {
       try {
         const body = await req.json();
         request_token = body.request_token;
@@ -97,37 +97,97 @@ serve(async (req) => {
         });
       }
 
-      // Validate required fields for POST (user_id is derived from session)
-      const missingFields = [];
-      if (!request_token) missingFields.push('request_token');
-
-      if (missingFields.length > 0) {
-        console.error('Missing required fields:', missingFields);
+      // Validate required fields for POST
+      if (!request_token) {
+        console.error('Missing required field: request_token');
         return new Response(JSON.stringify({ 
-          error: 'Missing required fields',
-          missing_fields: missingFields,
-          received: {
-            request_token: !!request_token
-          }
+          error: 'Missing required field: request_token'
         }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      console.log('Proceeding with token exchange');
+      // Extract user_id from Supabase session
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) {
+        console.error('No Authorization header found');
+        return new Response(JSON.stringify({ 
+          error: 'No authorization header found. User must be authenticated.'
+        }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Get environment variables for session validation
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.error('Supabase credentials not configured for session validation');
+        return new Response(JSON.stringify({ 
+          error: 'Service configuration error'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Initialize Supabase client to verify the session
+      const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      });
+
+      // Get user from session
+      const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+      if (userError || !user) {
+        console.error('Failed to get user from session:', userError?.message);
+        return new Response(JSON.stringify({ 
+          error: 'Invalid or expired session',
+          details: userError?.message
+        }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      user_id = user.id;
+      console.log('Successfully extracted user_id from session:', user_id);
+      console.log('Proceeding with token exchange for user:', user_id);
+    } else {
+      return new Response(JSON.stringify({ 
+        error: 'Method not allowed',
+        message: 'Only GET and POST methods are supported'
+      }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    // Get environment variables (shared by both paths for POST)
+    // Only proceed with token exchange for POST requests (user_id is required)
+    if (req.method !== 'POST' || !user_id) {
+      console.error('Token exchange can only be performed for authenticated POST requests');
+      return new Response(JSON.stringify({ 
+        error: 'Token exchange requires authenticated POST request'
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Get environment variables for token exchange
     const kiteApiKey = Deno.env.get('KITE_API_KEY');
     const kiteApiSecret = Deno.env.get('KITE_API_SECRET');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    console.log('Environment variables check:');
+    console.log('Environment variables check for token exchange:');
     console.log('- KITE_API_KEY:', !!kiteApiKey);
     console.log('- KITE_API_SECRET:', !!kiteApiSecret);
-    console.log('- SUPABASE_URL:', !!supabaseUrl);
     console.log('- SUPABASE_SERVICE_ROLE_KEY:', !!supabaseServiceKey);
 
     // Validate environment variables for token exchange
@@ -145,43 +205,10 @@ serve(async (req) => {
       });
     }
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Supabase credentials not configured');
+    if (!supabaseServiceKey) {
+      console.error('Supabase service key not configured');
       return new Response(JSON.stringify({ 
-        error: 'Supabase credentials not configured',
-        missing: {
-          url: !supabaseUrl,
-          service_key: !supabaseServiceKey
-        }
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    // Validate environment variables for token exchange
-    if (!kiteApiKey || !kiteApiSecret) {
-      console.error('Kite API credentials not configured');
-      return new Response(JSON.stringify({ 
-        error: 'Kite API credentials not configured',
-        missing: {
-          api_key: !kiteApiKey,
-          api_secret: !kiteApiSecret
-        }
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('Supabase credentials not configured');
-      return new Response(JSON.stringify({ 
-        error: 'Supabase credentials not configured',
-        missing: {
-          url: !supabaseUrl,
-          service_key: !supabaseServiceKey
-        }
+        error: 'Supabase service key not configured'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -275,9 +302,10 @@ serve(async (req) => {
     console.log('Access token extracted successfully, length:', accessToken.length);
 
     // Initialize Supabase client with error handling
-    console.log('Initializing Supabase client...');
+    console.log('Initializing Supabase client for database operations...');
     let supabase;
     try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
       supabase = createClient(supabaseUrl, supabaseServiceKey);
       console.log('Supabase client initialized successfully');
     } catch (clientError) {
