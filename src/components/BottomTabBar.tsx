@@ -14,7 +14,7 @@ const BottomTabBar = () => {
   const getTabClasses = (path: string) => {
     const isActive = location.pathname === path;
     return `flex-1 flex flex-col items-center justify-center py-2 px-1 transition-colors ${
-      isActive ? "text-primary" : "text-secondary"
+      isActive ? "text-primary" : "text-[#B0B0B0]"
     }`;
   };
 

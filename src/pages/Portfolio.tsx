@@ -62,8 +62,12 @@ const Portfolio = () => {
     <div className="min-h-screen bg-background pb-20">
       <div className="px-6 py-8">
         {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Portfolio</h1>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <img src="/src/assets/logo.svg" alt="ArthSetu" className="h-8 w-8" />
+            <span className="text-xl font-bold text-foreground">ArthSetu</span>
+          </div>
+          <h1 className="text-xl font-bold text-foreground">Portfolio</h1>
         </div>
 
         {/* Portfolio Summary Card */}
@@ -71,20 +75,20 @@ const Portfolio = () => {
           <CardContent className="p-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-secondary">Total Value</p>
+                <p className="text-sm text-[#B0B0B0]">Total Value</p>
                 <p className="text-2xl font-bold text-foreground">
                   ₹{portfolioData.totalValue.toLocaleString()}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-secondary">Total Invested</p>
+                <p className="text-sm text-[#B0B0B0]">Total Invested</p>
                 <p className="text-xl font-semibold text-foreground">
                   ₹{portfolioData.totalInvested.toLocaleString()}
                 </p>
               </div>
               <div className="col-span-2 flex items-center justify-between pt-4 border-t border-border">
                 <div>
-                  <p className="text-sm text-secondary">Profit/Loss</p>
+                  <p className="text-sm text-[#B0B0B0]">Profit/Loss</p>
                   <p className={`text-xl font-bold ${portfolioData.profit > 0 ? 'text-primary' : 'text-destructive'}`}>
                     {portfolioData.profit > 0 ? '+' : ''}₹{portfolioData.profit.toLocaleString()}
                   </p>
@@ -162,7 +166,7 @@ const Portfolio = () => {
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <h3 className="text-lg font-bold text-foreground">{holding.stock}</h3>
-                        <p className="text-sm text-secondary">{holding.shares} shares</p>
+                        <p className="text-sm text-[#B0B0B0]">{holding.shares} shares</p>
                       </div>
                       <div className={`text-right ${holding.change > 0 ? 'text-primary' : 'text-destructive'}`}>
                         <p className="font-semibold">
@@ -173,19 +177,19 @@ const Portfolio = () => {
                     
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-secondary">Current Value</p>
+                        <p className="text-[#B0B0B0]">Current Value</p>
                         <p className="font-semibold text-foreground">₹{holding.currentValue.toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-secondary">Invested</p>
+                        <p className="text-[#B0B0B0]">Invested</p>
                         <p className="font-semibold text-foreground">₹{holding.investedAmount.toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-secondary">Avg Price</p>
+                        <p className="text-[#B0B0B0]">Avg Price</p>
                         <p className="font-semibold text-foreground">₹{holding.avgPrice}</p>
                       </div>
                       <div>
-                        <p className="text-secondary">P&L</p>
+                        <p className="text-[#B0B0B0]">P&L</p>
                         <p className={`font-semibold ${holding.currentValue > holding.investedAmount ? 'text-primary' : 'text-destructive'}`}>
                           ₹{(holding.currentValue - holding.investedAmount).toLocaleString()}
                         </p>

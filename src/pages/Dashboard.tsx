@@ -55,9 +55,12 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background pb-20">
       <div className="w-full max-w-md mx-auto px-6 py-8 space-y-6">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground">Your portfolio alerts</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <img src="/src/assets/logo.svg" alt="ArthSetu" className="h-8 w-8" />
+            <span className="text-xl font-bold text-foreground">ArthSetu</span>
+          </div>
+          <h1 className="text-xl font-bold text-foreground">Alerts</h1>
         </div>
         
         {/* Summary Cards */}
