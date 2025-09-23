@@ -28,11 +28,12 @@ const Settings = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener
+    // Set up auth state listener - only for actual sign out events
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Settings: Auth state change:', event, !!session);
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        fetchUserData();
+      if (event === 'SIGNED_OUT') {
+        // Only redirect on actual logout
+        navigate("/login");
       }
     });
 
@@ -50,11 +51,13 @@ const Settings = () => {
 
       if (sessionError) {
         console.error('Settings: getSession error:', sessionError);
+        // Don't redirect, just show we couldn't get session data
+        return;
       }
 
       if (!session?.user) {
-        console.log('Settings: No active session, redirecting to login');
-        navigate('/login');
+        console.log('Settings: No active session - showing logged out state');
+        // Don't redirect, just show that user needs to login
         return;
       }
 
@@ -98,9 +101,9 @@ const Settings = () => {
       console.error('Settings: Error fetching user data:', error);
       // Don't redirect on data fetch errors, just show the error
       toast({
-        title: "Error",
-        description: "Failed to load some user data",
-        variant: "destructive",
+        title: "Warning",
+        description: "Some user data could not be loaded",
+        variant: "default",
       });
     } finally {
       console.log('Settings: Setting loading to false');
@@ -130,6 +133,32 @@ const Settings = () => {
     return (
       <div className="min-h-screen bg-background pb-20 flex items-center justify-center">
         <div className="text-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show login prompt if no user data but don't force logout
+  if (!userProfile?.email) {
+    return (
+      <div className="min-h-screen bg-background pb-20">
+        <div className="px-6 py-8">
+          <div className="flex items-center gap-3 mb-8">
+            <img src={logo} alt="ArthSetu" className="h-8 w-8" />
+            <span className="text-xl font-bold text-foreground">ArthSetu</span>
+          </div>
+          
+          <Card className="bg-card border-border">
+            <CardContent className="p-6 text-center">
+              <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-foreground mb-2">Welcome to Settings</h2>
+              <p className="text-muted-foreground mb-4">Please log in to view your profile and preferences</p>
+              <Button onClick={() => navigate('/login')} className="w-full">
+                Go to Login
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+        <BottomTabBar />
       </div>
     );
   }
