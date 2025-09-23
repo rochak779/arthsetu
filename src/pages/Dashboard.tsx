@@ -3,56 +3,49 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, AlertTriangle, Clock, Star } from "lucide-react";
 import BottomTabBar from "@/components/BottomTabBar";
-
 const Dashboard = () => {
   const navigate = useNavigate();
-
-  const mockAlerts = [
-    {
-      id: 1,
-      stock: "AAPL",
-      summary: "Strong buy signal",
-      status: "buy",
-      priority: "high"
-    },
-    {
-      id: 2,
-      stock: "GOOGL",
-      summary: "Consider trimming",
-      status: "trim",
-      priority: "high"
-    },
-    {
-      id: 3,
-      stock: "TSLA",
-      summary: "Hold position",
-      status: "hold",
-      priority: "high"
-    },
-    {
-      id: 4,
-      stock: "MSFT",
-      summary: "Monitor closely",
-      status: "buy",
-      priority: "medium"
-    }
-  ];
-
+  const mockAlerts = [{
+    id: 1,
+    stock: "AAPL",
+    summary: "Strong buy signal",
+    status: "buy",
+    priority: "high"
+  }, {
+    id: 2,
+    stock: "GOOGL",
+    summary: "Consider trimming",
+    status: "trim",
+    priority: "high"
+  }, {
+    id: 3,
+    stock: "TSLA",
+    summary: "Hold position",
+    status: "hold",
+    priority: "high"
+  }, {
+    id: 4,
+    stock: "MSFT",
+    summary: "Monitor closely",
+    status: "buy",
+    priority: "medium"
+  }];
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "buy": return "text-status-buy";
-      case "trim": return "text-status-trim";
-      case "hold": return "text-status-hold";
-      default: return "text-muted-foreground";
+      case "buy":
+        return "text-status-buy";
+      case "trim":
+        return "text-status-trim";
+      case "hold":
+        return "text-status-hold";
+      default:
+        return "text-muted-foreground";
     }
   };
-
   const getActionButtonVariant = (status: string) => {
     return status === "buy" ? "default" : "outline";
   };
-
-  return (
-    <div className="min-h-screen bg-background pb-20">
+  return <div className="min-h-screen bg-background pb-20">
       <div className="w-full max-w-md mx-auto px-6 py-8 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -94,12 +87,7 @@ const Dashboard = () => {
         <div className="space-y-3">
           <h2 className="text-lg font-semibold text-foreground">Recent Alerts</h2>
           
-          {mockAlerts.map((alert) => (
-            <Card 
-              key={alert.id} 
-              className="bg-card border-border cursor-pointer hover:bg-card/80 transition-colors"
-              onClick={() => navigate(`/alert/${alert.id}`)}
-            >
+          {mockAlerts.map(alert => <Card key={alert.id} className="bg-card border-border cursor-pointer hover:bg-card/80 transition-colors" onClick={() => navigate(`/alert/${alert.id}`)}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -107,9 +95,7 @@ const Dashboard = () => {
                       <h3 className="text-lg font-bold text-foreground">{alert.stock}</h3>
                       <p className="text-sm text-muted-foreground">{alert.summary}</p>
                     </div>
-                    {alert.priority === "high" && (
-                      <Star className="h-4 w-4 text-warning fill-warning" />
-                    )}
+                    {alert.priority === "high"}
                   </div>
                   <div className={`text-sm font-semibold uppercase ${getStatusColor(alert.status)}`}>
                     {alert.status}
@@ -117,32 +103,19 @@ const Dashboard = () => {
                 </div>
                 
                 <div className="flex gap-3">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="flex-1 bg-transparent border-accent text-accent hover:bg-accent/10"
-                  >
+                  <Button variant="outline" size="sm" className="flex-1 bg-transparent border-accent text-accent hover:bg-accent/10">
                     View Details
                   </Button>
-                  {alert.status !== "hold" && (
-                    <Button 
-                      variant={getActionButtonVariant(alert.status)}
-                      size="sm"
-                      className="flex-1"
-                    >
+                  {alert.status !== "hold" && <Button variant={getActionButtonVariant(alert.status)} size="sm" className="flex-1">
                       {alert.status === "buy" ? "Buy Now" : "Trim"}
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
       </div>
       
       <BottomTabBar />
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
