@@ -28,14 +28,42 @@ const Settings = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Settings: Auth state change:', event, !!session);
+      if (event === 'SIGNED_OUT' || !session) {
+        navigate("/login");
+      } else if (event === 'SIGNED_IN' || session) {
+        fetchUserData();
+      }
+    });
+
+    // Initial data fetch
     fetchUserData();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const fetchUserData = async () => {
     try {
+      console.log('Settings: Starting fetchUserData');
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
-      if (userError || !user) {
+      console.log('Settings: Auth check result:', { user: !!user, userError });
+      
+      if (userError) {
+        console.error('Settings: Auth error:', userError);
+        toast({
+          title: "Error",
+          description: "Authentication error. Please log in again.",
+          variant: "destructive",
+        });
+        navigate("/login");
+        return;
+      }
+      
+      if (!user) {
+        console.log('Settings: No user found, redirecting to login');
         toast({
           title: "Error",
           description: "Please log in to view settings",
@@ -45,6 +73,8 @@ const Settings = () => {
         return;
       }
 
+      console.log('Settings: User ID:', user.id);
+
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from('users')
@@ -52,8 +82,11 @@ const Settings = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
+      console.log('Settings: Profile fetch result:', { profileData, profileError });
+
       if (profileError) {
         console.error('Error fetching profile:', profileError);
+        // Don't fail completely, just show empty profile
       } else {
         setUserProfile(profileData);
       }
@@ -65,19 +98,24 @@ const Settings = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
+      console.log('Settings: Preferences fetch result:', { preferencesData, preferencesError });
+
       if (preferencesError) {
         console.error('Error fetching preferences:', preferencesError);
+        // Don't fail completely, just show empty preferences
       } else {
         setPreferences(preferencesData);
       }
     } catch (error) {
-      console.error('Error fetching user data:', error);
+      console.error('Settings: Error fetching user data:', error);
+      // Don't redirect on data fetch errors, just show the error
       toast({
         title: "Error",
-        description: "Failed to load user data",
+        description: "Failed to load some user data",
         variant: "destructive",
       });
     } finally {
+      console.log('Settings: Setting loading to false');
       setLoading(false);
     }
   };
