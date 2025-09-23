@@ -14,10 +14,21 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('user_id');
+    let userId;
+    
+    // Handle both GET and POST requests
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      userId = url.searchParams.get('user_id');
+    } else if (req.method === 'POST') {
+      const body = await req.json();
+      userId = body.user_id;
+    }
+
+    console.log('Kite holdings function invoked for user:', userId);
 
     if (!userId) {
+      console.error('User ID is required but not provided');
       return new Response(JSON.stringify({ error: 'User ID is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

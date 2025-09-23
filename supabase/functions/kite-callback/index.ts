@@ -15,7 +15,9 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Kite callback function invoked');
     const { request_token, user_id } = await req.json();
+    console.log('Received callback for user:', user_id, 'with token:', request_token ? 'present' : 'missing');
 
     if (!request_token || !user_id) {
       return new Response(JSON.stringify({ 
@@ -28,8 +30,10 @@ serve(async (req) => {
 
     const kiteApiKey = Deno.env.get('KITE_API_KEY');
     const kiteApiSecret = Deno.env.get('KITE_API_SECRET');
+    console.log('Kite credentials available - API Key:', !!kiteApiKey, 'API Secret:', !!kiteApiSecret);
 
     if (!kiteApiKey || !kiteApiSecret) {
+      console.error('Kite API credentials not configured');
       return new Response(JSON.stringify({ 
         error: 'Kite API credentials not configured' 
       }), {

@@ -14,18 +14,31 @@ serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const userId = url.searchParams.get('user_id');
+    let userId;
+    
+    // Handle both GET and POST requests
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      userId = url.searchParams.get('user_id');
+    } else if (req.method === 'POST') {
+      const body = await req.json();
+      userId = body.user_id;
+    }
+
+    console.log('Received request for user:', userId);
 
     if (!userId) {
+      console.error('User ID is required but not provided');
       return new Response(JSON.stringify({ error: 'User ID is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
     const kiteApiKey = Deno.env.get('KITE_API_KEY');
+    console.log('Kite API Key available:', !!kiteApiKey);
+    
     if (!kiteApiKey) {
+      console.error('Kite API key not configured');
       return new Response(JSON.stringify({ error: 'Kite API key not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
