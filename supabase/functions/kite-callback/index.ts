@@ -14,6 +14,17 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Handle unsupported methods
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return new Response(JSON.stringify({ 
+      error: 'Method not allowed',
+      message: 'Only GET and POST methods are supported'
+    }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     console.log('Kite callback function invoked');
     console.log('Request method:', req.method);
@@ -21,24 +32,62 @@ serve(async (req) => {
     
     let request_token, user_id, status;
     
-    // Handle the callback from Kite (GET request with query params)
+    // Handle GET requests (redirects from Zerodha KITE)
     if (req.method === 'GET') {
       const url = new URL(req.url);
       request_token = url.searchParams.get('request_token');
       status = url.searchParams.get('status');
+      user_id = url.searchParams.get('user_id'); // Optional, can be null
       
       console.log('GET request parameters:');
       console.log('- request_token:', request_token);
       console.log('- status:', status);
+      console.log('- user_id:', user_id);
       console.log('- All query params:', Object.fromEntries(url.searchParams.entries()));
       
-    } else if (req.method === 'POST') {
+      // For GET requests, just confirm receipt
+      if (!request_token) {
+        console.error('Missing request_token in GET request');
+        return new Response(JSON.stringify({ 
+          error: 'Request token is required',
+          method: req.method
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Check for failed/cancelled login
+      if (status && status !== 'success') {
+        console.error('Kite login failed with status:', status);
+        return new Response(JSON.stringify({ 
+          error: 'Kite login failed or was cancelled',
+          status: status
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Return success response for GET request
+      return new Response(JSON.stringify({
+        message: "GET callback received",
+        request_token: request_token,
+        user_id: user_id || null
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Handle POST requests (token exchange and storage)
+    if (req.method === 'POST') {
       try {
         const body = await req.json();
         request_token = body.request_token;
         user_id = body.user_id;
-        status = body.status;
         console.log('POST request - parsed body successfully');
+        console.log('- request_token:', !!request_token);
+        console.log('- user_id:', !!user_id);
       } catch (jsonError) {
         console.error('Failed to parse JSON body:', jsonError);
         return new Response(JSON.stringify({ 
@@ -49,85 +98,31 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+
+      // Validate required fields for POST
+      const missingFields = [];
+      if (!request_token) missingFields.push('request_token');
+      if (!user_id) missingFields.push('user_id');
+
+      if (missingFields.length > 0) {
+        console.error('Missing required fields:', missingFields);
+        return new Response(JSON.stringify({ 
+          error: 'Missing required fields',
+          missing_fields: missingFields,
+          received: {
+            request_token: !!request_token,
+            user_id: !!user_id
+          }
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      console.log('Proceeding with token exchange for user:', user_id);
     }
 
-    if (!request_token) {
-      console.error('Missing request_token');
-      return new Response(JSON.stringify({ 
-        error: 'Request token is required',
-        received: {
-          request_token: !!request_token,
-          method: req.method,
-          url: req.url
-        }
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    
-    // Check for failed/cancelled login
-    if (status && status !== 'success') {
-      console.error('Kite login failed with status:', status);
-      return new Response(JSON.stringify({ 
-        error: 'Kite login failed or was cancelled',
-        status: status
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Get user_id from Supabase auth session since Kite doesn't preserve state
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error('No authorization header found');
-      return new Response(JSON.stringify({ 
-        error: 'Authentication required - please log in first',
-        details: 'No authorization header found'
-      }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Initialize Supabase client to get user from auth session
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Supabase credentials not configured');
-      return new Response(JSON.stringify({ 
-        error: 'Server configuration error',
-        details: 'Missing Supabase credentials'
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    
-    if (userError || !user) {
-      console.error('Failed to get user from auth session:', userError);
-      return new Response(JSON.stringify({ 
-        error: 'Authentication failed',
-        details: userError?.message || 'Unable to verify user session'
-      }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    user_id = user.id;
-    console.log('Successfully extracted user_id from auth session:', user_id);
-    console.log('Final values - user_id:', user_id, 'request_token:', request_token);
-
-    // Validate environment variables
+    // Get environment variables (shared by both paths for POST)
     const kiteApiKey = Deno.env.get('KITE_API_KEY');
     const kiteApiSecret = Deno.env.get('KITE_API_SECRET');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -139,6 +134,36 @@ serve(async (req) => {
     console.log('- SUPABASE_URL:', !!supabaseUrl);
     console.log('- SUPABASE_SERVICE_ROLE_KEY:', !!supabaseServiceKey);
 
+    // Validate environment variables for token exchange
+    if (!kiteApiKey || !kiteApiSecret) {
+      console.error('Kite API credentials not configured');
+      return new Response(JSON.stringify({ 
+        error: 'Kite API credentials not configured',
+        missing: {
+          api_key: !kiteApiKey,
+          api_secret: !kiteApiSecret
+        }
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase credentials not configured');
+      return new Response(JSON.stringify({ 
+        error: 'Supabase credentials not configured',
+        missing: {
+          url: !supabaseUrl,
+          service_key: !supabaseServiceKey
+        }
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    // Validate environment variables for token exchange
     if (!kiteApiKey || !kiteApiSecret) {
       console.error('Kite API credentials not configured');
       return new Response(JSON.stringify({ 
