@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const VerifyEmail = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [isEmailVerified, setIsEmailVerified] = useState(false);
 
   useEffect(() => {
@@ -32,8 +34,19 @@ const VerifyEmail = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleContinue = () => {
-    navigate("/preferences");
+  const handleContinue = async () => {
+    // Check current email verification status
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user?.email_confirmed_at) {
+      navigate("/preferences");
+    } else {
+      toast({
+        title: "Email not verified",
+        description: "Please check your email and click the verification link before continuing.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCancel = () => {
@@ -78,7 +91,6 @@ const VerifyEmail = () => {
           <Button 
             onClick={handleContinue} 
             className="w-full h-14 text-lg font-semibold"
-            disabled={!isEmailVerified}
           >
             Continue
           </Button>
