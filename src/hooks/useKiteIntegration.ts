@@ -38,15 +38,22 @@ export const useKiteIntegration = () => {
 
     try {
       // Step 1: Get Kite login URL
-      const loginUrlResponse = await fetch(`${KITE_API_BASE}/kite/login-url?user_id=${userId}`, {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+      const loginUrlResponse = await fetch(`${KITE_API_BASE}/kite/login-url`, {
+        method: 'POST',
+        headers: { 
+          'ngrok-skip-browser-warning': 'true',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user_id: userId })
       });
 
       if (!loginUrlResponse.ok) {
-        throw new Error('Failed to get Kite login URL');
+        const errorText = await loginUrlResponse.text();
+        throw new Error(`Failed to get Kite login URL: ${errorText}`);
       }
 
-      const { login_url } = await loginUrlResponse.json();
+      const data = await loginUrlResponse.json();
+      const login_url = data.login_url || data.url;
 
       // Step 2: Open popup for Kite authentication
       const popup = window.open(
@@ -67,8 +74,13 @@ export const useKiteIntegration = () => {
 
       const pollHoldings = async (): Promise<boolean> => {
         try {
-          const holdingsResponse = await fetch(`${KITE_API_BASE}/kite/holdings?user_id=${userId}`, {
-            headers: { 'ngrok-skip-browser-warning': 'true' }
+          const holdingsResponse = await fetch(`${KITE_API_BASE}/kite/holdings`, {
+            method: 'POST',
+            headers: { 
+              'ngrok-skip-browser-warning': 'true',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id: userId })
           });
 
           if (holdingsResponse.ok) {
@@ -212,8 +224,13 @@ export const useKiteIntegration = () => {
     if (!userId) return;
 
     try {
-      const holdingsResponse = await fetch(`${KITE_API_BASE}/kite/holdings?user_id=${userId}`, {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+      const holdingsResponse = await fetch(`${KITE_API_BASE}/kite/holdings`, {
+        method: 'POST',
+        headers: { 
+          'ngrok-skip-browser-warning': 'true',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ user_id: userId })
       });
 
       if (holdingsResponse.ok) {
