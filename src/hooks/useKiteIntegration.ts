@@ -38,13 +38,11 @@ export const useKiteIntegration = () => {
 
     try {
       // Step 1: Get Kite login URL
-      const loginUrlResponse = await fetch(`${KITE_API_BASE}/kite/login-url`, {
-        method: 'POST',
+      const loginUrlResponse = await fetch(`${KITE_API_BASE}/kite/login-url?user_id=${userId}`, {
         headers: { 
           'ngrok-skip-browser-warning': 'true',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ user_id: userId })
+          'accept': 'application/json'
+        }
       });
 
       if (!loginUrlResponse.ok) {
@@ -72,22 +70,56 @@ export const useKiteIntegration = () => {
       let holdingsData = null;
       let accessToken = null;
 
-      const pollHoldings = async (): Promise<boolean> => {
+      const checkForCallback = async (): Promise<string | null> => {
         try {
-          const holdingsResponse = await fetch(`${KITE_API_BASE}/kite/holdings`, {
-            method: 'POST',
+          // Check if popup URL contains request_token (indicating successful auth)
+          const popupUrl = popup.location?.href;
+          if (popupUrl && popupUrl.includes('request_token=')) {
+            const urlParams = new URLSearchParams(popupUrl.split('?')[1]);
+            return urlParams.get('request_token');
+          }
+        } catch (error) {
+          // Cross-origin error is expected, ignore
+        }
+        return null;
+      };
+
+      const exchangeToken = async (requestToken: string): Promise<boolean> => {
+        try {
+          const callbackResponse = await fetch(`${KITE_API_BASE}/kite/callback?request_token=${requestToken}&user_id=${userId}`, {
             headers: { 
               'ngrok-skip-browser-warning': 'true',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ user_id: userId })
+              'accept': 'application/json'
+            }
+          });
+
+          if (callbackResponse.ok) {
+            const data = await callbackResponse.json();
+            accessToken = data.access_token;
+            return true;
+          }
+          return false;
+        } catch (error) {
+          console.error('Error exchanging token:', error);
+          return false;
+        }
+      };
+
+      const pollHoldings = async (): Promise<boolean> => {
+        try {
+          const holdingsResponse = await fetch(`${KITE_API_BASE}/kite/holdings?user_id=${userId}`, {
+            headers: { 
+              'ngrok-skip-browser-warning': 'true',
+              'accept': 'application/json'
+            }
           });
 
           if (holdingsResponse.ok) {
             const data = await holdingsResponse.json();
             if (data.holdings && data.holdings.length > 0) {
               holdingsData = data.holdings;
-              accessToken = data.access_token;
+              // Use token from exchange if available, otherwise from holdings response
+              accessToken = accessToken || data.access_token;
               return true;
             }
           }
@@ -97,6 +129,8 @@ export const useKiteIntegration = () => {
           return false;
         }
       };
+
+      let tokenExchanged = false;
 
       const pollInterval = setInterval(async () => {
         pollAttempts++;
@@ -132,7 +166,22 @@ export const useKiteIntegration = () => {
           return;
         }
 
-        // Poll for holdings
+        // First, check for authentication callback and exchange token
+        if (!tokenExchanged) {
+          const requestToken = await checkForCallback();
+          if (requestToken) {
+            const exchangeSuccess = await exchangeToken(requestToken);
+            if (exchangeSuccess) {
+              tokenExchanged = true;
+              toast({
+                title: "Authentication Successful",
+                description: "Fetching your holdings...",
+              });
+            }
+          }
+        }
+
+        // Then poll for holdings
         const holdingsReady = await pollHoldings();
         
         if (holdingsReady && holdingsData) {
@@ -224,13 +273,11 @@ export const useKiteIntegration = () => {
     if (!userId) return;
 
     try {
-      const holdingsResponse = await fetch(`${KITE_API_BASE}/kite/holdings`, {
-        method: 'POST',
+      const holdingsResponse = await fetch(`${KITE_API_BASE}/kite/holdings?user_id=${userId}`, {
         headers: { 
           'ngrok-skip-browser-warning': 'true',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ user_id: userId })
+          'accept': 'application/json'
+        }
       });
 
       if (holdingsResponse.ok) {
