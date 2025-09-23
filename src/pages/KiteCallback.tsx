@@ -50,7 +50,7 @@ const KiteCallback = () => {
           return;
         }
 
-        // Step 1: Exchange token with backend
+        // Step 1: Exchange request token for access token
         const callbackResponse = await fetch(
           `${API_BASE}/kite/callback?request_token=${requestToken}&user_id=${user.id}`,
           {
@@ -88,7 +88,7 @@ const KiteCallback = () => {
           return;
         }
 
-        // Step 2: Fetch holdings
+        // Step 2: Fetch holdings using the access token
         const holdingsResponse = await fetch(
           `${API_BASE}/kite/holdings?user_id=${user.id}`,
           {
