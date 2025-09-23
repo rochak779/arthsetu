@@ -9,16 +9,16 @@ const AlertDetails = () => {
 
   // Mock data - in real app this would come from API
   const alertData = {
-    stock: "RELIANCE",
-    fullSummary: "Reliance Industries Ltd. is showing strong bullish momentum with a breakthrough above key resistance levels. Technical indicators suggest continued upward movement with strong volume support. The company's recent earnings beat and positive guidance for the next quarter provide fundamental backing for this technical signal.",
+    stock: "MAZDOCK",
+    fullSummary: "Mazagon Dock Shipbuilders Ltd. is showing strong bullish momentum with a breakthrough above key resistance levels. Technical indicators suggest continued upward movement with strong volume support. The company's recent earnings beat and positive guidance for the next quarter provide fundamental backing for this technical signal.",
     confidence: "high", // high, medium, low
     sources: [
-      { title: "Reliance Earnings Beat Estimates", url: "#" },
-      { title: "Technical Analysis: RELIANCE Breakout", url: "#" },
+      { title: "Mazdock Earnings Beat Estimates", url: "#" },
+      { title: "Technical Analysis: MAZDOCK Breakout", url: "#" },
       { title: "Market News: Tech Sector Rally", url: "#" }
     ],
     status: "buy",
-    price: "₹178.50",
+    price: "₹2980.50",
     change: "+2.4%"
   };
 
