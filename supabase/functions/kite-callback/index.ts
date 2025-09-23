@@ -37,13 +37,13 @@ serve(async (req) => {
       const url = new URL(req.url);
       request_token = url.searchParams.get('request_token');
       status = url.searchParams.get('status');
-      user_id = url.searchParams.get('user_id'); // Optional, can be null
+      // Do NOT read user_id from URL params. It must come from Supabase session when needed.
+      user_id = null;
       
       console.log('GET request parameters:');
       console.log('- request_token:', request_token);
       console.log('- status:', status);
-      console.log('- user_id:', user_id);
-      console.log('- All query params:', Object.fromEntries(url.searchParams.entries()));
+      console.log('- user_id: (ignored from URL, will use session if available)');
       
       // For GET requests, just confirm receipt
       if (!request_token) {
@@ -84,10 +84,8 @@ serve(async (req) => {
       try {
         const body = await req.json();
         request_token = body.request_token;
-        user_id = body.user_id;
         console.log('POST request - parsed body successfully');
         console.log('- request_token:', !!request_token);
-        console.log('- user_id:', !!user_id);
       } catch (jsonError) {
         console.error('Failed to parse JSON body:', jsonError);
         return new Response(JSON.stringify({ 
@@ -99,10 +97,9 @@ serve(async (req) => {
         });
       }
 
-      // Validate required fields for POST
+      // Validate required fields for POST (user_id is derived from session)
       const missingFields = [];
       if (!request_token) missingFields.push('request_token');
-      if (!user_id) missingFields.push('user_id');
 
       if (missingFields.length > 0) {
         console.error('Missing required fields:', missingFields);
@@ -110,8 +107,7 @@ serve(async (req) => {
           error: 'Missing required fields',
           missing_fields: missingFields,
           received: {
-            request_token: !!request_token,
-            user_id: !!user_id
+            request_token: !!request_token
           }
         }), {
           status: 400,
@@ -119,7 +115,7 @@ serve(async (req) => {
         });
       }
 
-      console.log('Proceeding with token exchange for user:', user_id);
+      console.log('Proceeding with token exchange');
     }
 
     // Get environment variables (shared by both paths for POST)
