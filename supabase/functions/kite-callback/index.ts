@@ -19,19 +19,33 @@ serve(async (req) => {
     console.log('Request method:', req.method);
     console.log('Request URL:', req.url);
     
-    let request_token, user_id;
+    let request_token, user_id, status;
     
-    // Handle the callback from Kite (likely GET request with query params)
+    // Handle the callback from Kite (GET request with query params)
     if (req.method === 'GET') {
       const url = new URL(req.url);
       request_token = url.searchParams.get('request_token');
-      user_id = url.searchParams.get('state'); // Kite sends user_id as 'state' parameter
-      console.log('GET request - request_token:', request_token, 'state (user_id):', user_id);
+      status = url.searchParams.get('status');
+      user_id = url.searchParams.get('state'); // User ID passed as state parameter
+      
+      console.log('GET request parameters:');
+      console.log('- request_token:', request_token);
+      console.log('- status:', status);
+      console.log('- state (user_id):', user_id);
+      console.log('- All query params:', Object.fromEntries(url.searchParams.entries()));
+      
+      // If Kite didn't use state parameter, try to get user_id from other sources
+      if (!user_id) {
+        user_id = url.searchParams.get('user_id');
+        console.log('- user_id from direct param:', user_id);
+      }
+      
     } else if (req.method === 'POST') {
       try {
         const body = await req.json();
         request_token = body.request_token;
         user_id = body.user_id;
+        status = body.status;
         console.log('POST request - parsed body successfully');
       } catch (jsonError) {
         console.error('Failed to parse JSON body:', jsonError);
@@ -45,38 +59,96 @@ serve(async (req) => {
       }
     }
     
-    console.log('Received callback for user:', user_id, 'with token:', request_token ? 'present' : 'missing');
+    // Check for failed/cancelled login
+    if (status && status !== 'success') {
+      console.error('Kite login failed with status:', status);
+      return new Response(JSON.stringify({ 
+        error: 'Kite login failed or was cancelled',
+        status: status
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    console.log('Final extracted values - user_id:', user_id, 'request_token:', request_token);
 
     if (!request_token || !user_id) {
+      console.error('Missing required parameters - request_token:', !!request_token, 'user_id:', !!user_id);
       return new Response(JSON.stringify({ 
-        error: 'Request token and user ID are required' 
+        error: 'Request token and user ID are required',
+        received: {
+          request_token: !!request_token,
+          user_id: !!user_id,
+          method: req.method,
+          url: req.url
+        }
       }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    // Validate environment variables
     const kiteApiKey = Deno.env.get('KITE_API_KEY');
     const kiteApiSecret = Deno.env.get('KITE_API_SECRET');
-    console.log('Kite credentials available - API Key:', !!kiteApiKey, 'API Secret:', !!kiteApiSecret);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    console.log('Environment variables check:');
+    console.log('- KITE_API_KEY:', !!kiteApiKey);
+    console.log('- KITE_API_SECRET:', !!kiteApiSecret);
+    console.log('- SUPABASE_URL:', !!supabaseUrl);
+    console.log('- SUPABASE_SERVICE_ROLE_KEY:', !!supabaseServiceKey);
 
     if (!kiteApiKey || !kiteApiSecret) {
       console.error('Kite API credentials not configured');
       return new Response(JSON.stringify({ 
-        error: 'Kite API credentials not configured' 
+        error: 'Kite API credentials not configured',
+        missing: {
+          api_key: !kiteApiKey,
+          api_secret: !kiteApiSecret
+        }
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Generate checksum for Kite API
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Supabase credentials not configured');
+      return new Response(JSON.stringify({ 
+        error: 'Supabase credentials not configured',
+        missing: {
+          url: !supabaseUrl,
+          service_key: !supabaseServiceKey
+        }
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Generate checksum for Kite API with validation
+    if (!request_token || request_token.length < 10) {
+      console.error('Invalid request token format:', request_token);
+      return new Response(JSON.stringify({ 
+        error: 'Invalid request token format',
+        token_length: request_token?.length || 0
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Generating checksum for Kite API...');
     const checksumString = `${kiteApiKey}${request_token}${kiteApiSecret}`;
     const encoder = new TextEncoder();
     const data = encoder.encode(checksumString);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const checksum = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    console.log('Checksum generated successfully');
 
     // Exchange request token for access token
     console.log('Making token exchange request to Kite API...');
@@ -126,15 +198,42 @@ serve(async (req) => {
       });
     }
     
-    console.log('Parsed token data:', tokenData);
-    const accessToken = tokenData?.data?.access_token;
+    console.log('Parsed token data structure:', Object.keys(tokenData));
+    
+    if (!tokenData?.data?.access_token) {
+      console.error('No access token in response:', tokenData);
+      return new Response(JSON.stringify({ 
+        error: 'No access token received from Kite',
+        response_structure: Object.keys(tokenData || {}),
+        response_data: tokenData
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const accessToken = tokenData.data.access_token;
+    console.log('Access token extracted successfully, length:', accessToken.length);
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Initialize Supabase client with error handling
+    console.log('Initializing Supabase client...');
+    let supabase;
+    try {
+      supabase = createClient(supabaseUrl, supabaseServiceKey);
+      console.log('Supabase client initialized successfully');
+    } catch (clientError) {
+      console.error('Failed to initialize Supabase client:', clientError);
+      return new Response(JSON.stringify({ 
+        error: 'Failed to initialize database connection',
+        details: clientError.message
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    // Store access token in users table
+    // Store access token in users table with comprehensive error handling
+    console.log('Storing access token for user:', user_id);
     const { error: updateError } = await supabase
       .from('users')
       .update({
@@ -144,31 +243,41 @@ serve(async (req) => {
       .eq('user_id', user_id);
 
     if (updateError) {
-      console.error('Error updating user with access token:', updateError);
+      console.error('Database update error details:', updateError);
       return new Response(JSON.stringify({ 
-        error: 'Failed to store access token',
-        details: updateError.message
+        error: 'Failed to store access token in database',
+        details: updateError.message,
+        code: updateError.code,
+        hint: updateError.hint
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log('Successfully stored access token for user:', user_id);
+    console.log('Access token stored successfully for user:', user_id);
+
+    // Return success with redirect information for frontend
+    const frontendUrl = Deno.env.get('SUPABASE_URL')?.replace('/functions/v1', '') || 'http://localhost:3000';
+    const redirectUrl = `${frontendUrl.replace('.supabase.co', '.lovableproject.com')}/portfolio?kite_connected=true`;
 
     return new Response(JSON.stringify({ 
       status: 'success',
       user_id: user_id,
-      access_token: accessToken
+      message: 'Kite account connected successfully',
+      redirect_url: redirectUrl
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in kite-callback function:', error);
+    console.error('Critical error in kite-callback function:', error);
+    console.error('Error stack:', error.stack);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      details: error.message
+      details: error.message,
+      type: error.name,
+      timestamp: new Date().toISOString()
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

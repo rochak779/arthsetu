@@ -34,37 +34,66 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Validate environment variables
     const kiteApiKey = Deno.env.get('KITE_API_KEY');
-    console.log('Kite API Key available:', !!kiteApiKey);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    
+    console.log('Environment check:');
+    console.log('- KITE_API_KEY:', !!kiteApiKey);
+    console.log('- SUPABASE_URL:', !!supabaseUrl);
     
     if (!kiteApiKey) {
       console.error('Kite API key not configured');
-      return new Response(JSON.stringify({ error: 'Kite API key not configured' }), {
+      return new Response(JSON.stringify({ 
+        error: 'Kite API key not configured',
+        details: 'KITE_API_KEY environment variable is missing'
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Get the project URL for callback
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    if (!supabaseUrl) {
+      console.error('Supabase URL not configured');
+      return new Response(JSON.stringify({ 
+        error: 'Supabase URL not configured',
+        details: 'SUPABASE_URL environment variable is missing'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Generate callback URL and login URL
     const callbackUrl = `${supabaseUrl}/functions/v1/kite-callback`;
+    
+    // Generate Kite login URL with proper state parameter and callback
+    const loginUrl = `https://kite.zerodha.com/connect/login?api_key=${kiteApiKey}&v=3&state=${encodeURIComponent(userId)}`;
 
-    // Generate Kite login URL with state parameter (user_id for callback)
-    const loginUrl = `https://kite.zerodha.com/connect/login?api_key=${kiteApiKey}&v=3&state=${userId}`;
-
-    console.log('Generated Kite login URL for user:', userId);
-    console.log('Callback URL:', callbackUrl);
+    console.log('Generated URLs:');
+    console.log('- Login URL:', loginUrl);
+    console.log('- Callback URL:', callbackUrl);
+    console.log('- User ID in state:', userId);
 
     return new Response(JSON.stringify({ 
       login_url: loginUrl,
-      callback_url: callbackUrl
+      callback_url: callbackUrl,
+      user_id: userId,
+      instructions: 'Redirect user to login_url. After Kite authentication, user will be redirected to callback_url.'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in kite-login-url function:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    console.error('Critical error in kite-login-url function:', error);
+    console.error('Error stack:', error.stack);
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      details: error.message,
+      type: error.name,
+      timestamp: new Date().toISOString()
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
