@@ -3,19 +3,71 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: ""
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Add validation and API call
-    navigate("/verify-email");
+    setIsLoading(true);
+
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: formData.fullName,
+          }
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data.user) {
+        // Insert user data into our users table
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            user_id: data.user.id,
+            full_name: formData.fullName,
+            email: formData.email
+          });
+
+        if (insertError) {
+          console.error('Error inserting user data:', insertError);
+        }
+
+        navigate("/verify-email");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -75,8 +127,12 @@ const Signup = () => {
           
           {/* Buttons */}
           <div className="space-y-4 pt-4">
-            <Button type="submit" className="w-full h-14 text-lg font-semibold">
-              Sign Up Free
+            <Button 
+              type="submit" 
+              className="w-full h-14 text-lg font-semibold"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating Account..." : "Sign Up Free"}
             </Button>
             
             <Link to="/login" className="block">

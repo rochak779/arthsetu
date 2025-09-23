@@ -1,9 +1,36 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Mail } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const VerifyEmail = () => {
   const navigate = useNavigate();
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+
+  useEffect(() => {
+    // Check authentication state
+    const checkAuthState = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user?.email_confirmed_at) {
+        setIsEmailVerified(true);
+      }
+    };
+
+    checkAuthState();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user?.email_confirmed_at) {
+          setIsEmailVerified(true);
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleContinue = () => {
     navigate("/preferences");
@@ -35,13 +62,25 @@ const VerifyEmail = () => {
         
         {/* Description */}
         <p className="text-lg text-muted-foreground">
-          Verify your email by clicking on the link in your email.
+          We've sent a verification link to your email. Please click it to verify your account and continue.
         </p>
+        
+        {isEmailVerified && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
+            <p className="text-green-800 text-center">
+              ✅ Email verified! You can now continue.
+            </p>
+          </div>
+        )}
         
         {/* Buttons */}
         <div className="space-y-4 pt-8">
-          <Button onClick={handleContinue} className="w-full h-14 text-lg font-semibold">
-            I've verified
+          <Button 
+            onClick={handleContinue} 
+            className="w-full h-14 text-lg font-semibold"
+            disabled={!isEmailVerified}
+          >
+            Continue
           </Button>
           
           <Button 
@@ -49,7 +88,7 @@ const VerifyEmail = () => {
             variant="outline" 
             className="w-full h-14 text-lg font-semibold bg-transparent border-accent text-accent hover:bg-accent/10"
           >
-            Cancel
+            Back to Signup
           </Button>
         </div>
       </div>

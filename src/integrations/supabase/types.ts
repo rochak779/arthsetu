@@ -14,7 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_preferences: {
+        Row: {
+          alert_pref: string
+          created_at: string | null
+          id: string
+          investor_type: string
+          risk_comfort: string
+          user_id: string
+        }
+        Insert: {
+          alert_pref: string
+          created_at?: string | null
+          id?: string
+          investor_type: string
+          risk_comfort: string
+          user_id: string
+        }
+        Update: {
+          alert_pref?: string
+          created_at?: string | null
+          id?: string
+          investor_type?: string
+          risk_comfort?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

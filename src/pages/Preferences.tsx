@@ -3,18 +3,72 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Preferences = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [preferences, setPreferences] = useState({
     investorType: "",
     riskComfort: "",
     alertPreferences: ""
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleContinue = () => {
-    // TODO: Save preferences
-    navigate("/integration");
+  const handleContinue = async () => {
+    if (!preferences.investorType || !preferences.riskComfort || !preferences.alertPreferences) {
+      toast({
+        title: "Error",
+        description: "Please fill in all preferences",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.user) {
+        toast({
+          title: "Error",
+          description: "Please log in to continue",
+          variant: "destructive"
+        });
+        navigate("/signup");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('user_preferences')
+        .insert({
+          user_id: session.user.id,
+          investor_type: preferences.investorType,
+          risk_comfort: preferences.riskComfort,
+          alert_pref: preferences.alertPreferences
+        });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      navigate("/integration");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -81,8 +135,12 @@ const Preferences = () => {
           
           {/* Continue Button */}
           <div className="pt-6">
-            <Button onClick={handleContinue} className="w-full h-14 text-lg font-semibold">
-              Continue
+            <Button 
+              onClick={handleContinue} 
+              className="w-full h-14 text-lg font-semibold"
+              disabled={isLoading}
+            >
+              {isLoading ? "Saving..." : "Continue"}
             </Button>
           </div>
         </div>
