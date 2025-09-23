@@ -12,6 +12,8 @@ interface UserProfile {
   full_name: string;
   email: string;
   kite_accesstoken: string | null;
+  groww_accesstoken: string | null;
+  upstox_accesstoken: string | null;
 }
 
 interface UserPreferences {
@@ -76,7 +78,7 @@ const Settings = () => {
       console.log('Settings: Fetching user profile from database...');
       const { data: profileData, error: profileError } = await supabase
         .from('users')
-        .select('full_name, email, kite_accesstoken')
+        .select('full_name, email, kite_accesstoken, groww_accesstoken, upstox_accesstoken')
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -105,7 +107,9 @@ const Settings = () => {
         setUserProfile({
           full_name: session.user.email?.split('@')[0] || 'User',
           email: session.user.email || 'No email',
-          kite_accesstoken: null
+          kite_accesstoken: null,
+          groww_accesstoken: null,
+          upstox_accesstoken: null
         });
       } else {
         console.log('Settings: Profile loaded successfully:', profileData);
@@ -142,7 +146,7 @@ const Settings = () => {
   };
 
   const handleConnect = (platform: string) => {
-    navigate('/integrations');
+    navigate('/integration');
   };
 
   const handleLogout = async () => {
@@ -271,23 +275,37 @@ const Settings = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-foreground">Groww</span>
-                <Button 
-                  variant="ghost" 
-                  className="text-primary hover:text-primary h-auto p-1"
-                  onClick={() => handleConnect('groww')}
-                >
-                  Connect
-                </Button>
+                {userProfile?.groww_accesstoken ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary"></div>
+                    <span className="text-primary text-sm">Connected</span>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    className="text-primary hover:text-primary h-auto p-1"
+                    onClick={() => handleConnect('groww')}
+                  >
+                    Connect
+                  </Button>
+                )}
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-foreground">Upstox</span>
-                <Button 
-                  variant="ghost" 
-                  className="text-primary hover:text-primary h-auto p-1"
-                  onClick={() => handleConnect('upstox')}
-                >
-                  Connect
-                </Button>
+                {userProfile?.upstox_accesstoken ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary"></div>
+                    <span className="text-primary text-sm">Connected</span>
+                  </div>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    className="text-primary hover:text-primary h-auto p-1"
+                    onClick={() => handleConnect('upstox')}
+                  >
+                    Connect
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>

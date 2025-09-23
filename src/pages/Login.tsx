@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -11,10 +12,26 @@ const Login = () => {
     password: ""
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Add validation and API call
-    navigate("/dashboard");
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (error) {
+        console.error('Login error:', error);
+        // Handle error appropriately
+        return;
+      }
+
+      console.log('Login successful:', data);
+      navigate("/dashboard");
+    } catch (error) {
+      console.error('Unexpected error:', error);
+    }
   };
 
   return (
