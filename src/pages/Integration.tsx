@@ -8,14 +8,25 @@ import { Loader2 } from "lucide-react";
 const Integration = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const { connectToKite, retryFetchHoldings, isConnecting, isPolling } = useKiteIntegration();
 
   useEffect(() => {
     const getUser = async () => {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      setLoading(false);
     };
     getUser();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleConnect = (platform: string) => {
@@ -64,14 +75,21 @@ const Integration = () => {
               </div>
               <Button 
                 onClick={() => handleConnect('Kite')} 
-                disabled={isConnecting || !user}
+                disabled={isConnecting || loading || !user}
                 className="w-full mt-4 bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isConnecting ? (
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : isConnecting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {isPolling ? 'Fetching Holdings...' : 'Connecting...'}
                   </>
+                ) : !user ? (
+                  'Please log in to connect'
                 ) : (
                   'Connect to Kite'
                 )}
