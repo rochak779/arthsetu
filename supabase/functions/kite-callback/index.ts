@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { createHash } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,7 +44,11 @@ serve(async (req) => {
 
     // Generate checksum for Kite API
     const checksumString = `${kiteApiKey}${request_token}${kiteApiSecret}`;
-    const checksum = createHash("sha256").update(checksumString).toString("hex");
+    const encoder = new TextEncoder();
+    const data = encoder.encode(checksumString);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const checksum = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
     // Exchange request token for access token
     const tokenResponse = await fetch('https://api.kite.trade/session/token', {
