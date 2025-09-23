@@ -9,7 +9,7 @@ const Integration = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { connectToKite, retryFetchHoldings, isConnecting, isPolling } = useKiteIntegration();
+  const { connectToKite, isConnecting } = useKiteIntegration();
 
   useEffect(() => {
     const getUser = async () => {
@@ -86,7 +86,7 @@ const Integration = () => {
                 ) : isConnecting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isPolling ? 'Fetching Holdings...' : 'Connecting...'}
+                    Redirecting to Kite...
                   </>
                 ) : !user ? (
                   'Please log in to connect'
@@ -97,16 +97,8 @@ const Integration = () => {
               {isConnecting && (
                 <div className="mt-2 text-center">
                   <p className="text-sm text-muted-foreground">
-                    {isPolling ? 'Waiting for holdings data...' : 'Opening Kite authentication...'}
+                    You will be redirected to Kite for authentication...
                   </p>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => user && retryFetchHoldings(user.id)}
-                    className="mt-1 text-xs"
-                  >
-                    Retry fetch holdings
-                  </Button>
                 </div>
               )}
             </CardContent>

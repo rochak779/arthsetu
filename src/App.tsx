@@ -16,6 +16,7 @@ import Portfolio from "./pages/Portfolio";
 import Market from "./pages/Market";
 import Settings from "./pages/Settings";
 import AlertDetails from "./pages/AlertDetails";
+import KiteCallback from "./pages/KiteCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/market" element={<Market />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/alert/:id" element={<AlertDetails />} />
+          <Route path="/oauth/kite/callback" element={<KiteCallback />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
