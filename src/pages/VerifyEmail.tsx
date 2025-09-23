@@ -35,15 +35,15 @@ const VerifyEmail = () => {
   }, []);
 
   const handleContinue = async () => {
-    // Check current email verification status
-    const { data: { session } } = await supabase.auth.getSession();
+    // Refresh the Supabase auth session manually
+    const { data: { user } } = await supabase.auth.getUser();
     
-    if (session?.user?.email_confirmed_at) {
+    if (user?.email_confirmed_at) {
       navigate("/preferences");
     } else {
       toast({
         title: "Email not verified",
-        description: "Please check your email and click the verification link before continuing.",
+        description: "Your email is not yet verified. Please check your inbox.",
         variant: "destructive",
       });
     }
