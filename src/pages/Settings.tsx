@@ -20,7 +20,7 @@ const Settings = () => {
       <div className="px-6 py-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
-          <img src="/src/assets/logo.svg" alt="ArthSetu" className="h-8 w-8" />
+          <img src="/assets/logo.svg" alt="ArthSetu" className="h-8 w-8" />
           <span className="text-xl font-bold text-foreground">ArthSetu</span>
         </div>
 
@@ -55,6 +55,34 @@ const Settings = () => {
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Alert Preference</span>
                 <span className="text-foreground font-medium">{preferences.alertPreference}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Connections Section */}
+        <Card className="bg-card border-border mb-8">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Connections</h3>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-foreground">Kite</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary"></div>
+                  <span className="text-primary text-sm">Connected</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-foreground">Groww</span>
+                <Button variant="ghost" className="text-primary hover:text-primary h-auto p-1">
+                  Connect
+                </Button>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-foreground">Upstox</span>
+                <Button variant="ghost" className="text-primary hover:text-primary h-auto p-1">
+                  Connect
+                </Button>
               </div>
             </div>
           </CardContent>

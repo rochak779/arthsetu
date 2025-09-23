@@ -14,7 +14,7 @@ const Preferences = () => {
 
   const handleContinue = () => {
     // TODO: Save preferences
-    navigate("/dashboard");
+    navigate("/integration");
   };
 
   return (
@@ -44,9 +44,9 @@ const Preferences = () => {
                 <SelectValue placeholder="Select your experience level" />
               </SelectTrigger>
               <SelectContent className="bg-card border-border">
-                <SelectItem value="beginner">Beginner</SelectItem>
-                <SelectItem value="intermediate">Intermediate</SelectItem>
-                <SelectItem value="expert">Expert</SelectItem>
+                <SelectItem value="intraday">Intraday Trader</SelectItem>
+                <SelectItem value="swing">Swing</SelectItem>
+                <SelectItem value="longterm">Long-Term</SelectItem>
               </SelectContent>
             </Select>
           </div>
