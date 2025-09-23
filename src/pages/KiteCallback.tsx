@@ -145,6 +145,18 @@ const KiteCallback = () => {
           }
         }
 
+        // Update users table with Kite connection (note: access token is stored on backend)
+        const { error: userUpdateError } = await supabase
+          .from('users')
+          .update({
+            last_login_date: new Date().toISOString()
+          })
+          .eq('user_id', user.id);
+
+        if (userUpdateError) {
+          console.error('Error updating user table:', userUpdateError);
+        }
+
         // Success!
         setStatus('success');
         setLoading(false);

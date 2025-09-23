@@ -41,7 +41,8 @@ const Preferences = () => {
         return;
       }
 
-      const { error } = await supabase
+      // Save user preferences
+      const { error: preferencesError } = await supabase
         .from('user_preferences')
         .insert({
           user_id: session.user.id,
@@ -50,10 +51,33 @@ const Preferences = () => {
           alert_pref: preferences.alertPreferences
         });
 
-      if (error) {
+      if (preferencesError) {
         toast({
           title: "Error",
-          description: error.message,
+          description: preferencesError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update or insert user data in users table
+      const { error: userError } = await supabase
+        .from('users')
+        .upsert({
+          user_id: session.user.id,
+          full_name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
+          email: session.user.email || '',
+          created_at: session.user.created_at,
+          email_verifiedat: session.user.email_confirmed_at,
+          last_login_date: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (userError) {
+        toast({
+          title: "Error",
+          description: userError.message,
           variant: "destructive"
         });
         return;
