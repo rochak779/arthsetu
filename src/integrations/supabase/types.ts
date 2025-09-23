@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      kite_holdings: {
+        Row: {
+          average_price: number
+          collateral_quantity: number
+          exchange: string
+          id: number
+          instrument_token: number
+          last_price: number
+          pnl: number
+          product: string
+          quantity: number
+          raw: Json
+          t1_quantity: number
+          tradingsymbol: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          average_price: number
+          collateral_quantity?: number
+          exchange: string
+          id?: never
+          instrument_token: number
+          last_price: number
+          pnl: number
+          product: string
+          quantity: number
+          raw: Json
+          t1_quantity?: number
+          tradingsymbol: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          average_price?: number
+          collateral_quantity?: number
+          exchange?: string
+          id?: never
+          instrument_token?: number
+          last_price?: number
+          pnl?: number
+          product?: string
+          quantity?: number
+          raw?: Json
+          t1_quantity?: number
+          tradingsymbol?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           alert_pref: string
@@ -47,6 +98,8 @@ export type Database = {
           email: string
           email_verifiedat: string | null
           full_name: string
+          kite_accesstoken: string | null
+          last_login_date: string | null
           user_id: string
         }
         Insert: {
@@ -54,6 +107,8 @@ export type Database = {
           email: string
           email_verifiedat?: string | null
           full_name: string
+          kite_accesstoken?: string | null
+          last_login_date?: string | null
           user_id: string
         }
         Update: {
@@ -61,6 +116,8 @@ export type Database = {
           email?: string
           email_verifiedat?: string | null
           full_name?: string
+          kite_accesstoken?: string | null
+          last_login_date?: string | null
           user_id?: string
         }
         Relationships: []
