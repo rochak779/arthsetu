@@ -12,6 +12,7 @@ interface CallbackResponse {
   status: string;
   user_id: string;
   broker_user_id?: string;
+  access_token?: string;
 }
 
 interface HoldingsResponse {
@@ -88,6 +89,25 @@ const KiteCallback = () => {
           return;
         }
 
+        // Store the access token in users table if provided
+        if (callbackData.access_token) {
+          const { error: tokenUpdateError } = await supabase
+            .from('users')
+            .update({
+              kite_accesstoken: callbackData.access_token,
+              last_login_date: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+
+          if (tokenUpdateError) {
+            console.error('Error storing access token:', tokenUpdateError);
+            setStatus('error');
+            setErrorMessage('Failed to store access token');
+            setLoading(false);
+            return;
+          }
+        }
+
         // Step 2: Fetch holdings using the access token
         const holdingsResponse = await fetch(
           `${API_BASE}/kite/holdings?user_id=${user.id}`,
@@ -145,17 +165,7 @@ const KiteCallback = () => {
           }
         }
 
-        // Update users table with Kite connection (note: access token is stored on backend)
-        const { error: userUpdateError } = await supabase
-          .from('users')
-          .update({
-            last_login_date: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
-
-        if (userUpdateError) {
-          console.error('Error updating user table:', userUpdateError);
-        }
+        // Access token and last login date already updated above
 
         // Success!
         setStatus('success');
