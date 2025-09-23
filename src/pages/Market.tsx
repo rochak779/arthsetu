@@ -58,21 +58,21 @@ const Market = () => {
     change: 1.87
   }];
   const watchlist = [{
-    stock: "AAPL",
+    stock: "SBIN",
     price: 175.50,
     change: 2.34
   }, {
-    stock: "GOOGL",
+    stock: "MAZDOCK",
     price: 2847.60,
-    change: 1.78
+    change: -1.78
   }, {
-    stock: "TSLA",
-    price: 245.80,
-    change: -1.45
+    stock: "RELIANCE",
+    price: 2890.45,
+    change: 1.23
   }, {
-    stock: "MSFT",
-    price: 320.50,
-    change: 0.92
+    stock: "ITC",
+    price: 456.20,
+    change: 1.87
   }];
   const StockCard = ({
     stock,

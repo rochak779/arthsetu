@@ -15,16 +15,16 @@ const Portfolio = () => {
   const holdings = [
     {
       id: 1,
-      stock: "AAPL",
-      currentValue: 45000,
-      investedAmount: 40000,
-      avgPrice: 175.50,
+      stock: "RELIANCE",
+      currentValue: 279735,
+      investedAmount: 273714,
+      avgPrice: 1200.50,
       shares: 228,
-      change: 12.5
+      change: 2.20
     },
     {
       id: 2,
-      stock: "GOOGL", 
+      stock: "MAZDOCK", 
       currentValue: 38500,
       investedAmount: 35000,
       avgPrice: 2850.75,
@@ -33,7 +33,7 @@ const Portfolio = () => {
     },
     {
       id: 3,
-      stock: "TSLA",
+      stock: "SBIN",
       currentValue: 28340.50,
       investedAmount: 25000,
       avgPrice: 245.80,
@@ -42,7 +42,7 @@ const Portfolio = () => {
     },
     {
       id: 4,
-      stock: "MSFT",
+      stock: "ITC",
       currentValue: 14000,
       investedAmount: 15000,
       avgPrice: 320.50,

@@ -7,25 +7,25 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const mockAlerts = [{
     id: 1,
-    stock: "AAPL",
+    stock: "MAZDOCK",
     summary: "Strong buy signal",
     status: "buy",
     priority: "high"
   }, {
     id: 2,
-    stock: "GOOGL",
+    stock: "SBIN",
     summary: "Consider trimming",
     status: "trim",
     priority: "high"
   }, {
     id: 3,
-    stock: "TSLA",
+    stock: "RELIANCE",
     summary: "Hold position",
     status: "hold",
     priority: "high"
   }, {
     id: 4,
-    stock: "MSFT",
+    stock: "ITC",
     summary: "Monitor closely",
     status: "buy",
     priority: "medium"
