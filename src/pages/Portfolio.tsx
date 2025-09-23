@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BottomTabBar from "@/components/BottomTabBar";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import logo from "@/assets/logo.svg";
 
 const Portfolio = () => {
   const portfolioData = {
@@ -74,7 +75,7 @@ const Portfolio = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <img src="/src/assets/logo.svg" alt="ArthSetu" className="h-8 w-8" />
+            <img src={logo} alt="ArthSetu Logo" className="h-8 w-8" />
             <span className="text-xl font-bold text-foreground">ArthSetu</span>
           </div>
           <h1 className="text-xl font-bold text-foreground">Portfolio</h1>

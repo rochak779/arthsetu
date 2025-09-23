@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BottomTabBar from "@/components/BottomTabBar";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import logo from "@/assets/logo.svg";
 const Market = () => {
   const topGainers = [{
     stock: "ADANIENT",
@@ -119,7 +120,7 @@ const Market = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <img src="/src/assets/logo.svg" alt="ArthSetu" className="h-8 w-8" />
+            <img src={logo} alt="ArthSetu Logo" className="h-8 w-8" />
             <span className="text-xl font-bold text-foreground">ArthSetu</span>
           </div>
           <div className="text-right">

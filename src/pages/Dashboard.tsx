@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, AlertTriangle, Clock, Star } from "lucide-react";
 import BottomTabBar from "@/components/BottomTabBar";
+import logo from "@/assets/logo.svg";
 const Dashboard = () => {
   const navigate = useNavigate();
   const mockAlerts = [{
@@ -50,7 +51,7 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <img src="/src/assets/logo.svg" alt="ArthSetu" className="h-8 w-8" />
+            <img src={logo} alt="ArthSetu Logo" className="h-8 w-8" />
             <span className="text-xl font-bold text-foreground">ArthSetu</span>
           </div>
           <h1 className="text-xl font-bold text-foreground">Alerts</h1>

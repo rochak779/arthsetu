@@ -31,9 +31,7 @@ const Settings = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('Settings: Auth state change:', event, !!session);
-      if (event === 'SIGNED_OUT' || !session) {
-        navigate("/login");
-      } else if (event === 'SIGNED_IN' || session) {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         fetchUserData();
       }
     });
@@ -47,39 +45,29 @@ const Settings = () => {
   const fetchUserData = async () => {
     try {
       console.log('Settings: Starting fetchUserData');
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      
-      console.log('Settings: Auth check result:', { user: !!user, userError });
-      
-      if (userError) {
-        console.error('Settings: Auth error:', userError);
-        toast({
-          title: "Error",
-          description: "Authentication error. Please log in again.",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Settings: getSession result:', { hasSession: !!session, sessionError });
+
+      if (sessionError) {
+        console.error('Settings: getSession error:', sessionError);
       }
-      
-      if (!user) {
-        console.log('Settings: No user found, redirecting to login');
-        toast({
-          title: "Error",
-          description: "Please log in to view settings",
-          variant: "destructive",
-        });
-        navigate("/login");
+
+      if (!session?.user) {
+        console.log('Settings: No active session, redirecting to login');
+        navigate('/login');
         return;
       }
 
-      console.log('Settings: User ID:', user.id);
+      const userId = session.user.id;
+      console.log('Settings: User ID:', userId);
+
+      
 
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from('users')
         .select('full_name, email, kite_accesstoken')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       console.log('Settings: Profile fetch result:', { profileData, profileError });
@@ -95,7 +83,7 @@ const Settings = () => {
       const { data: preferencesData, error: preferencesError } = await supabase
         .from('user_preferences')
         .select('investor_type, risk_comfort, alert_pref')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
       console.log('Settings: Preferences fetch result:', { preferencesData, preferencesError });
