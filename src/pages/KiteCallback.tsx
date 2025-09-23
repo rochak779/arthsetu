@@ -54,8 +54,7 @@ const KiteCallback = () => {
         // Step 1: Exchange request token for access token using Supabase Edge Function
         const { data: callbackData, error: callbackError } = await supabase.functions.invoke('kite-callback', {
           body: {
-            request_token: requestToken,
-            user_id: user.id
+            request_token: requestToken
           }
         });
 

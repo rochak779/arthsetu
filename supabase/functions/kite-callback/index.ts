@@ -26,19 +26,11 @@ serve(async (req) => {
       const url = new URL(req.url);
       request_token = url.searchParams.get('request_token');
       status = url.searchParams.get('status');
-      user_id = url.searchParams.get('state'); // User ID passed as state parameter
       
       console.log('GET request parameters:');
       console.log('- request_token:', request_token);
       console.log('- status:', status);
-      console.log('- state (user_id):', user_id);
       console.log('- All query params:', Object.fromEntries(url.searchParams.entries()));
-      
-      // If Kite didn't use state parameter, try to get user_id from other sources
-      if (!user_id) {
-        user_id = url.searchParams.get('user_id');
-        console.log('- user_id from direct param:', user_id);
-      }
       
     } else if (req.method === 'POST') {
       try {
@@ -58,6 +50,21 @@ serve(async (req) => {
         });
       }
     }
+
+    if (!request_token) {
+      console.error('Missing request_token');
+      return new Response(JSON.stringify({ 
+        error: 'Request token is required',
+        received: {
+          request_token: !!request_token,
+          method: req.method,
+          url: req.url
+        }
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     
     // Check for failed/cancelled login
     if (status && status !== 'success') {
@@ -70,24 +77,55 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
-    console.log('Final extracted values - user_id:', user_id, 'request_token:', request_token);
 
-    if (!request_token || !user_id) {
-      console.error('Missing required parameters - request_token:', !!request_token, 'user_id:', !!user_id);
+    // Get user_id from Supabase auth session since Kite doesn't preserve state
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header found');
       return new Response(JSON.stringify({ 
-        error: 'Request token and user ID are required',
-        received: {
-          request_token: !!request_token,
-          user_id: !!user_id,
-          method: req.method,
-          url: req.url
-        }
+        error: 'Authentication required - please log in first',
+        details: 'No authorization header found'
       }), {
-        status: 400,
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Initialize Supabase client to get user from auth session
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Supabase credentials not configured');
+      return new Response(JSON.stringify({ 
+        error: 'Server configuration error',
+        details: 'Missing Supabase credentials'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('Failed to get user from auth session:', userError);
+      return new Response(JSON.stringify({ 
+        error: 'Authentication failed',
+        details: userError?.message || 'Unable to verify user session'
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    user_id = user.id;
+    console.log('Successfully extracted user_id from auth session:', user_id);
+    console.log('Final values - user_id:', user_id, 'request_token:', request_token);
 
     // Validate environment variables
     const kiteApiKey = Deno.env.get('KITE_API_KEY');
