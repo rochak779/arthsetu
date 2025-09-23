@@ -1,4 +1,4 @@
-import { BarChart3, TrendingUp, Bell } from "lucide-react";
+import { BarChart3, TrendingUp, Bell, Settings } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const BottomTabBar = () => {
@@ -8,7 +8,8 @@ const BottomTabBar = () => {
   const tabs = [
     { id: "alerts", label: "Alerts", icon: Bell, path: "/dashboard" },
     { id: "portfolio", label: "Portfolio", icon: BarChart3, path: "/portfolio" },
-    { id: "market", label: "Market", icon: TrendingUp, path: "/market" }
+    { id: "market", label: "Market", icon: TrendingUp, path: "/market" },
+    { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
   ];
 
   const getTabClasses = (path: string) => {

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, AlertTriangle, Clock } from "lucide-react";
+import { TrendingUp, AlertTriangle, Clock, Star } from "lucide-react";
 import BottomTabBar from "@/components/BottomTabBar";
 
 const Dashboard = () => {
@@ -20,21 +20,21 @@ const Dashboard = () => {
       stock: "GOOGL",
       summary: "Consider trimming",
       status: "trim",
-      priority: "medium"
+      priority: "high"
     },
     {
       id: 3,
       stock: "TSLA",
       summary: "Hold position",
       status: "hold",
-      priority: "low"
+      priority: "high"
     },
     {
       id: 4,
       stock: "MSFT",
-      summary: "Accumulate more",
+      summary: "Monitor closely",
       status: "buy",
-      priority: "high"
+      priority: "medium"
     }
   ];
 
@@ -68,7 +68,7 @@ const Dashboard = () => {
           <Card className="bg-card border-border">
             <CardContent className="p-4 text-center">
               <TrendingUp className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-primary">12</p>
+              <p className="text-2xl font-bold text-primary">4</p>
               <p className="text-xs text-muted-foreground">Total Alerts</p>
             </CardContent>
           </Card>
@@ -76,7 +76,7 @@ const Dashboard = () => {
           <Card className="bg-card border-border">
             <CardContent className="p-4 text-center">
               <AlertTriangle className="h-6 w-6 text-destructive mx-auto mb-2" />
-              <p className="text-2xl font-bold text-destructive">4</p>
+              <p className="text-2xl font-bold text-destructive">3</p>
               <p className="text-xs text-muted-foreground">High Priority</p>
             </CardContent>
           </Card>
@@ -84,8 +84,8 @@ const Dashboard = () => {
           <Card className="bg-card border-border">
             <CardContent className="p-4 text-center">
               <Clock className="h-6 w-6 text-warning mx-auto mb-2" />
-              <p className="text-2xl font-bold text-warning">3</p>
-              <p className="text-xs text-muted-foreground">Action Needed</p>
+              <p className="text-2xl font-bold text-warning">78%</p>
+              <p className="text-xs text-muted-foreground">Average Confidence</p>
             </CardContent>
           </Card>
         </div>
@@ -102,9 +102,14 @@ const Dashboard = () => {
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <h3 className="text-lg font-bold text-foreground">{alert.stock}</h3>
-                    <p className="text-sm text-muted-foreground">{alert.summary}</p>
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <h3 className="text-lg font-bold text-foreground">{alert.stock}</h3>
+                      <p className="text-sm text-muted-foreground">{alert.summary}</p>
+                    </div>
+                    {alert.priority === "high" && (
+                      <Star className="h-4 w-4 text-warning fill-warning" />
+                    )}
                   </div>
                   <div className={`text-sm font-semibold uppercase ${getStatusColor(alert.status)}`}>
                     {alert.status}
@@ -119,13 +124,15 @@ const Dashboard = () => {
                   >
                     View Details
                   </Button>
-                  <Button 
-                    variant={getActionButtonVariant(alert.status)}
-                    size="sm"
-                    className="flex-1"
-                  >
-                    {alert.status === "buy" ? "Buy Now" : alert.status === "trim" ? "Trim" : "Hold"}
-                  </Button>
+                  {alert.status !== "hold" && (
+                    <Button 
+                      variant={getActionButtonVariant(alert.status)}
+                      size="sm"
+                      className="flex-1"
+                    >
+                      {alert.status === "buy" ? "Buy Now" : "Trim"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

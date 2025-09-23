@@ -10,7 +10,7 @@ const Settings = () => {
   };
 
   const preferences = {
-    investorType: "Intermediate",
+    investorType: "Swing",
     riskComfort: "Medium", 
     alertPreference: "Real-time"
   };
