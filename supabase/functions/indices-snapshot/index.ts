@@ -16,27 +16,57 @@ type Payload = {
   stale?: boolean;
 };
 
-const YAHOO_URL = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=%5ENSEI,%5EBSESN';
+const YAHOO_URL_PRIMARY = 'https://query2.finance.yahoo.com/v7/finance/quote?symbols=%5ENSEI,%5EBSESN&region=IN&lang=en-IN';
+const YAHOO_URL_FALLBACK = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=%5ENSEI,%5EBSESN&region=IN&lang=en-IN';
 const CACHE_TTL_MS = 30_000; // 30 seconds
 
 let cache: { data: Payload; expiresAt: number } | null = null;
 
-async function fetchYahooQuotes(): Promise<Payload> {
-  const res = await fetch(YAHOO_URL, {
+async function warmUpYahoo(): Promise<string> {
+  // Grab cookies by visiting the finance quote page first
+  const warm = await fetch('https://finance.yahoo.com/quote/%5ENSEI', {
     headers: {
       'User-Agent':
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
-      'Accept': 'application/json, text/plain, */*',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache',
       'Connection': 'keep-alive',
     },
   });
+  // Collate cookies if present
+  const setCookie = warm.headers.get('set-cookie') || '';
+  return setCookie;
+}
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Yahoo fetch failed: ${res.status} ${res.statusText} ${text}`);
+async function fetchYahooQuotes(): Promise<Payload> {
+  const cookie = await warmUpYahoo().catch(() => '');
+  const commonHeaders: HeadersInit = {
+    'User-Agent':
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+    'Connection': 'keep-alive',
+    'Referer': 'https://finance.yahoo.com/quote/%5ENSEI',
+  };
+  if (cookie) {
+    (commonHeaders as any)['cookie'] = cookie;
+  }
+
+  // Try primary host first, then fallback
+  let res = await fetch(YAHOO_URL_PRIMARY, { headers: commonHeaders }).catch(() => undefined as any);
+  if (!res || !res.ok) {
+    const text = res ? await res.text() : 'no-response';
+    console.log(`Yahoo primary failed: ${res?.status} ${res?.statusText} ${text}`);
+    res = await fetch(YAHOO_URL_FALLBACK, { headers: commonHeaders }).catch(() => undefined as any);
+  }
+
+  if (!res || !res.ok) {
+    const text = res ? await res.text() : 'no-response';
+    throw new Error(`Yahoo fetch failed: ${res?.status} ${res?.statusText} ${text}`);
   }
 
   const json = await res.json();

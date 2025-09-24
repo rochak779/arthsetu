@@ -137,7 +137,7 @@ const Market = () => {
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
-                <p className="text-sm text-muted-foreground">NIFTY 50</p>
+                <p className="text-sm text-muted-foreground">NIFTY</p>
                 <p className="text-xl font-bold text-foreground">
                   {idxLoading ? '—' : nifty?.price?.toLocaleString('en-IN') ?? '—'}
                 </p>
