@@ -46,6 +46,14 @@ const Dashboard = () => {
   const getActionButtonVariant = (status: string) => {
     return status === "buy" ? "default" : "outline";
   };
+
+  const getButtonText = (status: string) => {
+    return status === "buy" ? "Buy Now" : "Trim";
+  };
+
+  const handleKiteRedirect = () => {
+    window.open('https://kite.zerodha.com/', '_blank');
+  };
   return <div className="min-h-screen bg-background pb-20">
       <div className="w-full max-w-md mx-auto px-6 py-8 space-y-6">
         {/* Header */}
@@ -104,12 +112,45 @@ const Dashboard = () => {
                 </div>
                 
                 <div className="flex gap-3">
-                  <Button variant="outline" size="sm" className="flex-1 bg-transparent border-accent text-accent hover:bg-accent/10">
-                    View Details
-                  </Button>
-                  {alert.status !== "hold" && <Button variant={getActionButtonVariant(alert.status)} size="sm" className="flex-1">
-                      {alert.status === "buy" ? "Buy Now" : "Trim"}
-                    </Button>}
+                  {alert.status !== "hold" && (
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1 bg-transparent border-accent text-accent hover:bg-accent/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/alert/${alert.id}`);
+                        }}
+                      >
+                        View Details
+                      </Button>
+                      <Button 
+                        variant={getActionButtonVariant(alert.status)} 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleKiteRedirect();
+                        }}
+                      >
+                        {getButtonText(alert.status)}
+                      </Button>
+                    </>
+                  )}
+                  {alert.status === "hold" && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full bg-transparent border-accent text-accent hover:bg-accent/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/alert/${alert.id}`);
+                      }}
+                    >
+                      View Details
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>)}

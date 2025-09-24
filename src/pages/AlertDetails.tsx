@@ -22,6 +22,14 @@ const AlertDetails = () => {
     change: "+2.4%"
   };
 
+  const getButtonText = (status: string) => {
+    return status === "buy" ? "Buy Now" : "Trim";
+  };
+
+  const handleKiteRedirect = () => {
+    window.open('https://kite.zerodha.com/', '_blank');
+  };
+
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
       case "high": return "text-primary";
@@ -118,9 +126,14 @@ const AlertDetails = () => {
 
           {/* Action Buttons */}
           <div className="space-y-3 pt-4">
-            <Button className="w-full h-14 text-lg font-semibold">
-              Take Action
-            </Button>
+            {alertData.status !== "hold" && (
+              <Button 
+                className="w-full h-14 text-lg font-semibold"
+                onClick={handleKiteRedirect}
+              >
+                {getButtonText(alertData.status)}
+              </Button>
+            )}
             <Button 
               variant="outline" 
               className="w-full h-14 text-lg font-semibold bg-transparent border-muted text-muted-foreground hover:bg-muted/10"
