@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     const { environment = 'test' } = await req.json().catch(() => ({}));
     
     // Determine webhook URL based on environment
-    const baseUrl = 'https://rickettsial-ericoid-tifany.ngrok-free.app';
+    const baseUrl = 'https://rickettsial-ericoid-tifany.ngrok-free.dev';
     const webhookUrl = environment === 'production' 
       ? `${baseUrl}/webhook/holdings`
       : `${baseUrl}/webhook-test/holdings`;
