@@ -128,6 +128,48 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_events: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          response_body: string | null
+          response_status_code: number | null
+          status: string
+          user_id: string
+          webhook_url: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload: Json
+          response_body?: string | null
+          response_status_code?: number | null
+          status: string
+          user_id: string
+          webhook_url: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status_code?: number | null
+          status?: string
+          user_id?: string
+          webhook_url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

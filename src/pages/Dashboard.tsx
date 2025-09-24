@@ -1,11 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, AlertTriangle, Clock, Star } from "lucide-react";
+import { TrendingUp, AlertTriangle, Clock, Star, Send } from "lucide-react";
 import BottomTabBar from "@/components/BottomTabBar";
 import logo from "@/assets/logo.svg";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isSyncing, setIsSyncing] = useState(false);
   const mockAlerts = [{
     id: 1,
     stock: "MAZDOCK",
@@ -54,6 +59,31 @@ const Dashboard = () => {
   const handleKiteRedirect = () => {
     window.open('https://kite.zerodha.com/', '_blank');
   };
+
+  const handleSyncToN8n = async () => {
+    setIsSyncing(true);
+    try {
+      const { error } = await supabase.functions.invoke('publish-holdings-webhook', {
+        body: { environment: 'test' }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Holdings data synced to n8n successfully",
+      });
+    } catch (error) {
+      console.error('Error syncing to n8n:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sync holdings to n8n",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
   return <div className="min-h-screen bg-background pb-20">
       <div className="w-full max-w-md mx-auto px-6 py-8 space-y-6">
         {/* Header */}
@@ -94,7 +124,19 @@ const Dashboard = () => {
         
         {/* Alert Tiles */}
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-foreground">Recent Alerts</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">Recent Alerts</h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSyncToN8n}
+              disabled={isSyncing}
+              className="flex items-center gap-2"
+            >
+              <Send className="h-4 w-4" />
+              {isSyncing ? "Syncing..." : "Sync to n8n"}
+            </Button>
+          </div>
           
           {mockAlerts.map(alert => <Card key={alert.id} className="bg-card border-border cursor-pointer hover:bg-card/80 transition-colors" onClick={() => navigate(`/alert/${alert.id}`)}>
               <CardContent className="p-4">
