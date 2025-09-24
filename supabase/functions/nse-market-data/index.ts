@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -11,6 +12,70 @@ interface StockData {
   price: number;
   change: number;
   changePercent: number;
+}
+
+// Fetch NIFTY 50 constituents directly from NSE API (server-side only)
+async function fetchNifty50FromNSE(): Promise<{ gainers: StockData[]; losers: StockData[] }> {
+  const UA =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36';
+  const baseHeaders: HeadersInit = {
+    'User-Agent': UA,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+  };
+
+  // Step 1: warm-up to get cookies
+  const warm = await fetch('https://www.nseindia.com/', { headers: baseHeaders });
+  const cookie = warm.headers.get('set-cookie') || '';
+
+  // Step 2: fetch constituents JSON
+  const apiHeaders: HeadersInit = {
+    'User-Agent': UA,
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': 'https://www.nseindia.com/',
+    'Cache-Control': 'no-cache',
+  } as HeadersInit;
+  if (cookie) (apiHeaders as any)['cookie'] = cookie;
+
+  const url = 'https://www.nseindia.com/api/equity-stockIndices?index=NIFTY%2050';
+  const res = await fetch(url, { headers: apiHeaders });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`NSE equity-stockIndices failed: ${res.status} ${res.statusText} ${t}`);
+  }
+
+  const json = await res.json();
+  const items: any[] = json?.data || [];
+
+  const stocks: StockData[] = items
+    .map((it) => {
+      const symbol = (it?.symbol || it?.meta || '').toString().trim();
+      const name = (it?.symbol || it?.meta || '').toString().trim();
+      const price = Number(it?.lastPrice ?? it?.last ?? it?.ltp ?? NaN);
+      const changePercent = Number(
+        (typeof it?.pChange === 'string' ? it.pChange.replace(/,%/g, '') : it?.pChange) ?? NaN,
+      );
+      const change = Number(
+        (typeof it?.change === 'string' ? it.change.replace(/,%/g, '') : it?.change) ?? NaN,
+      );
+      return { symbol, name, price, change, changePercent } as StockData;
+    })
+    .filter((s) => s.symbol && Number.isFinite(s.price) && Number.isFinite(s.changePercent));
+
+  const gainers = [...stocks]
+    .filter((s) => s.changePercent > 0)
+    .sort((a, b) => b.changePercent - a.changePercent)
+    .slice(0, 5);
+
+  const losers = [...stocks]
+    .filter((s) => s.changePercent < 0)
+    .sort((a, b) => a.changePercent - b.changePercent)
+    .slice(0, 5);
+
+  return { gainers, losers };
 }
 
 // Primary: Parse Zerodha technicals data
@@ -168,16 +233,29 @@ const parseNSEStockData = (html: string): StockData[] => {
 
 const scrapeGainersLosers = async (): Promise<{ gainers: StockData[], losers: StockData[] }> => {
   try {
+    // Preferred: NSE constituents API
+    console.log('Fetching gainers/losers from NSE constituents API (preferred)');
+    const fromNse = await fetchNifty50FromNSE();
+    if ((fromNse.gainers?.length || 0) > 0 || (fromNse.losers?.length || 0) > 0) {
+      console.log(`NSE API success: ${fromNse.gainers.length} gainers, ${fromNse.losers.length} losers`);
+      return fromNse;
+    }
+  } catch (err) {
+    console.log('NSE constituents API failed:', (err as any)?.message);
+  }
+
+  try {
     // Primary: Try Zerodha
     console.log('Fetching gainers/losers from Zerodha (primary)');
     const zerodhaData = await parseZerodhaData();
     
     if (zerodhaData.gainers.length > 0 || zerodhaData.losers.length > 0) {
       console.log(`Zerodha success: ${zerodhaData.gainers.length} gainers, ${zerodhaData.losers.length} losers`);
-      return { gainers: zerodhaData.gainers, losers: zerodhaData.losers };
+      // Limit to top 5
+      return { gainers: zerodhaData.gainers.slice(0,5), losers: zerodhaData.losers.slice(0,5) };
     }
   } catch (error) {
-    console.log('Zerodha gainers/losers failed:', error.message);
+    console.log('Zerodha gainers/losers failed:', (error as any)?.message);
   }
 
   // Fallback: Try NSE
@@ -201,19 +279,19 @@ const scrapeGainersLosers = async (): Promise<{ gainers: StockData[], losers: St
         const gainers = allStocks
           .filter(stock => stock.changePercent > 0)
           .sort((a, b) => b.changePercent - a.changePercent)
-          .slice(0, 10);
+          .slice(0, 5);
         
         const losers = allStocks
           .filter(stock => stock.changePercent < 0)
           .sort((a, b) => a.changePercent - b.changePercent)
-          .slice(0, 10);
+          .slice(0, 5);
         
         console.log(`NSE fallback success: ${gainers.length} gainers, ${losers.length} losers`);
         return { gainers, losers };
       }
     }
   } catch (error) {
-    console.log('NSE fallback also failed:', error.message);
+    console.log('NSE fallback also failed:', (error as any)?.message);
   }
 
   // No dummy data - return empty arrays
@@ -232,7 +310,7 @@ const scrapeNiftyData = async (): Promise<StockData[]> => {
       return zerodhaData.trending;
     }
   } catch (error) {
-    console.log('Zerodha trending failed:', error.message);
+    console.log('Zerodha trending failed:', (error as any)?.message);
   }
 
   // Fallback: Try NSE
@@ -258,7 +336,7 @@ const scrapeNiftyData = async (): Promise<StockData[]> => {
       }
     }
   } catch (error) {
-    console.log('NSE trending fallback also failed:', error.message);
+    console.log('NSE trending fallback also failed:', (error as any)?.message);
   }
 
   // No dummy data - return empty array
@@ -266,7 +344,7 @@ const scrapeNiftyData = async (): Promise<StockData[]> => {
   return [];
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -329,7 +407,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in nse-market-data function:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'Failed to fetch market data' 
+      error: (error as any)?.message || 'Failed to fetch market data' 
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
