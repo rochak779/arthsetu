@@ -69,3 +69,6 @@ verify_jwt = true
 
 [functions.nse-market-data]
 verify_jwt = false
+
+[functions.indices-snapshot]
+verify_jwt = false

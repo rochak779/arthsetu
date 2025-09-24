@@ -4,6 +4,7 @@ import BottomTabBar from "@/components/BottomTabBar";
 import { TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import { useMarketData } from "@/hooks/useMarketData";
 import { format } from "date-fns";
+import { useIndices } from "@/hooks/useIndices";
 import logo from "@/assets/logo.svg";
 
 // Default/fallback data structure
@@ -74,6 +75,7 @@ const MarketSection = ({
 
 const Market = () => {
   const { trending, gainers, losers, isLoading, error, lastUpdated, refetch, hasData } = useMarketData();
+  const { nifty, sensex, lastUpdated: idxUpdated, loading: idxLoading, error: idxError, refetch: refetchIdx } = useIndices();
 
   const trendingStocks = trending || [];
   const gainerStocks = gainers || [];
@@ -136,19 +138,27 @@ const Market = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">NIFTY 50</p>
-                <p className="text-xl font-bold text-foreground">19,674.25</p>
-                <p className="text-primary text-sm font-semibold">+1.45%</p>
+                <p className="text-xl font-bold text-foreground">
+                  {idxLoading ? '—' : nifty?.price?.toLocaleString('en-IN') ?? '—'}
+                </p>
+                <p className={`${(nifty?.changePct ?? 0) >= 0 ? 'text-primary' : 'text-destructive'} text-sm font-semibold`}>
+                  {idxLoading || nifty == null ? '—' : `${nifty.changePct >= 0 ? '+' : ''}${nifty.changePct.toFixed(2)}%`}
+                </p>
               </div>
               <div className="text-center">
                 <p className="text-sm text-muted-foreground">SENSEX</p>
-                <p className="text-xl font-bold text-foreground">65,834.10</p>
-                <p className="text-primary text-sm font-semibold">+1.28%</p>
+                <p className="text-xl font-bold text-foreground">
+                  {idxLoading ? '—' : sensex?.price?.toLocaleString('en-IN') ?? '—'}
+                </p>
+                <p className={`${(sensex?.changePct ?? 0) >= 0 ? 'text-primary' : 'text-destructive'} text-sm font-semibold`}>
+                  {idxLoading || sensex == null ? '—' : `${sensex.changePct >= 0 ? '+' : ''}${sensex.changePct.toFixed(2)}%`}
+                </p>
               </div>
             </div>
-            {lastUpdated && (
+            {(idxUpdated || lastUpdated) && (
               <div className="mt-4 text-center">
                 <p className="text-xs text-muted-foreground">
-                  Last updated: {format(lastUpdated, 'PPp')}
+                  Last updated: {format(idxUpdated ?? lastUpdated!, 'PPp')}
                 </p>
               </div>
             )}
