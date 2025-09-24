@@ -73,10 +73,11 @@ const MarketSection = ({
 );
 
 const Market = () => {
-  const { trending, priceShockers, isLoading, lastUpdated, refetch } = useMarketData();
+  const { trending, gainers, losers, isLoading, error, lastUpdated, refetch, hasData } = useMarketData();
 
-  const trendingStocks = formatStockData(trending);
-  const priceShockerStocks = formatStockData(priceShockers);
+  const trendingStocks = trending || [];
+  const gainerStocks = gainers || [];
+  const loserStocks = losers || [];
 
   if (isLoading) {
     return (
@@ -84,6 +85,20 @@ const Market = () => {
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p>Loading market data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !hasData) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <p className="text-destructive">{error}</p>
+          <Button onClick={refetch} className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Try Again
+          </Button>
         </div>
       </div>
     );
@@ -142,8 +157,25 @@ const Market = () => {
 
         {/* Market Sections */}
         <div className="space-y-8">
-          <MarketSection title="Trending Stocks" stocks={trendingStocks} />
-          <MarketSection title="Price Shockers" stocks={priceShockerStocks} />
+          {trendingStocks.length > 0 && (
+            <MarketSection title="Trending Stocks" stocks={trendingStocks} />
+          )}
+          {gainerStocks.length > 0 && (
+            <MarketSection title="Top Gainers" stocks={gainerStocks} />
+          )}
+          {loserStocks.length > 0 && (
+            <MarketSection title="Top Losers" stocks={loserStocks} />
+          )}
+          
+          {!hasData && !isLoading && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground mb-4">No market data available</p>
+              <Button onClick={refetch} className="flex items-center gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Fetch Data
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       

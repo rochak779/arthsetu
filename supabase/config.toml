@@ -67,5 +67,5 @@ verify_jwt = true
 [functions.kite-holdings]
 verify_jwt = true
 
-[functions.market-data]
+[functions.nse-market-data]
 verify_jwt = false
