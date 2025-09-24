@@ -182,6 +182,7 @@ async function fetchNiftyFromNSE(): Promise<IndexInfo | null> {
     'Accept': 'application/json, text/plain, */*',
     'Accept-Language': 'en-US,en;q=0.9',
     'Referer': 'https://www.nseindia.com/',
+    'x-requested-with': 'XMLHttpRequest',
   };
   if (cookie) (headers as any)['cookie'] = cookie;
   try {
@@ -241,16 +242,20 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('indices-snapshot error:', error);
-    const err = error as any;
+    const err = (error as any)?.message || 'Failed to fetch indices';
     // Serve stale cache if available
     if (cache?.data) {
-      return new Response(JSON.stringify({ ...cache.data, stale: true, error: err?.message }), {
+      return new Response(JSON.stringify({ ...cache.data, stale: true, error: err }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    return new Response(JSON.stringify({ error: err?.message || 'Failed to fetch indices' }), {
-      status: 500,
+    // No cache: return empty-but-200 payload to avoid frontend 500s
+    const empty: Payload = {
+      lastUpdated: new Date().toISOString(),
+      indices: { nifty: null, sensex: null },
+      stale: true,
+    } as any;
+    return new Response(JSON.stringify({ ...empty, error: err }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
