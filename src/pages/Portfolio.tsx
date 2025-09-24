@@ -1,57 +1,21 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import BottomTabBar from "@/components/BottomTabBar";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, RefreshCw, ExternalLink } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { usePortfolioData } from "@/hooks/usePortfolioData";
+import { format } from "date-fns";
 import logo from "@/assets/logo.svg";
 
 const Portfolio = () => {
-  const portfolioData = {
-    totalValue: 125840.50,
-    totalInvested: 100000,
-    profit: 25840.50,
-    profitPercentage: 25.84
+  const { portfolioData, isLoading, isRefreshing, refreshPortfolio } = usePortfolioData();
+
+  const handleBuyTrim = () => {
+    window.open('https://kite.zerodha.com/', '_blank');
   };
 
-  const holdings = [
-    {
-      id: 1,
-      stock: "RELIANCE",
-      currentValue: 279735,
-      investedAmount: 273714,
-      avgPrice: 1200.50,
-      shares: 228,
-      change: 2.20
-    },
-    {
-      id: 2,
-      stock: "MAZDOCK", 
-      currentValue: 38500,
-      investedAmount: 35000,
-      avgPrice: 2850.75,
-      shares: 13,
-      change: 10.0
-    },
-    {
-      id: 3,
-      stock: "SBIN",
-      currentValue: 28340.50,
-      investedAmount: 25000,
-      avgPrice: 245.80,
-      shares: 115,
-      change: 13.36
-    },
-    {
-      id: 4,
-      stock: "ITC",
-      currentValue: 14000,
-      investedAmount: 15000,
-      avgPrice: 320.50,
-      shares: 44,
-      change: -6.67
-    }
-  ];
-
+  // Keep sector data for chart display
   const sectorData = [
     { sector: "Technology", percentage: 65, color: "bg-primary" },
     { sector: "Healthcare", percentage: 20, color: "bg-accent" },
@@ -66,8 +30,19 @@ const Portfolio = () => {
     { date: "Mar", value: 110000 },
     { date: "Apr", value: 108000 },
     { date: "May", value: 115000 },
-    { date: "Jun", value: 125840 }
+    { date: "Jun", value: portfolioData.totalValue }
   ];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading portfolio...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -78,7 +53,19 @@ const Portfolio = () => {
             <img src={logo} alt="ArthSetu Logo" className="h-8 w-8" />
             <span className="text-xl font-bold text-foreground">ArthSetu</span>
           </div>
-          <h1 className="text-xl font-bold text-foreground">Portfolio</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold text-foreground">Portfolio</h1>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={refreshPortfolio}
+              disabled={isRefreshing}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         {/* Portfolio Summary Card */}
@@ -100,23 +87,30 @@ const Portfolio = () => {
               <div className="col-span-2 flex items-center justify-between pt-4 border-t border-border">
                 <div>
                   <p className="text-sm text-[#B0B0B0]">Profit/Loss</p>
-                  <p className={`text-xl font-bold ${portfolioData.profit > 0 ? 'text-primary' : 'text-destructive'}`}>
-                    {portfolioData.profit > 0 ? '+' : ''}₹{portfolioData.profit.toLocaleString()}
+                  <p className={`text-xl font-bold ${portfolioData.totalPnL > 0 ? 'text-primary' : 'text-destructive'}`}>
+                    {portfolioData.totalPnL > 0 ? '+' : ''}₹{portfolioData.totalPnL.toLocaleString()}
                   </p>
                 </div>
                 <div className={`flex items-center gap-1 px-3 py-1 rounded-full ${
-                  portfolioData.profitPercentage > 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'
+                  portfolioData.totalPnLPercent > 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'
                 }`}>
-                  {portfolioData.profitPercentage > 0 ? 
+                  {portfolioData.totalPnLPercent > 0 ? 
                     <TrendingUp className="h-4 w-4" /> : 
                     <TrendingDown className="h-4 w-4" />
                   }
                   <span className="font-semibold">
-                    {portfolioData.profitPercentage > 0 ? '+' : ''}{portfolioData.profitPercentage}%
+                    {portfolioData.totalPnLPercent > 0 ? '+' : ''}{portfolioData.totalPnLPercent.toFixed(2)}%
                   </span>
                 </div>
               </div>
             </div>
+            {portfolioData.lastUpdated && (
+              <div className="mt-4 text-center">
+                <p className="text-xs text-muted-foreground">
+                  Last updated: {format(portfolioData.lastUpdated, 'PPp')}
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -196,44 +190,62 @@ const Portfolio = () => {
 
           <TabsContent value="holdings" className="mt-6">
             <div className="space-y-3">
-              {holdings.map((holding) => (
-                <Card key={holding.id} className="bg-card border-border">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="text-lg font-bold text-foreground">{holding.stock}</h3>
-                        <p className="text-sm text-[#B0B0B0]">{holding.shares} shares</p>
-                      </div>
-                      <div className={`text-right ${holding.change > 0 ? 'text-primary' : 'text-destructive'}`}>
-                        <p className="font-semibold">
-                          {holding.change > 0 ? '+' : ''}{holding.change}%
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <p className="text-[#B0B0B0]">Current Value</p>
-                        <p className="font-semibold text-foreground">₹{holding.currentValue.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-[#B0B0B0]">Invested</p>
-                        <p className="font-semibold text-foreground">₹{holding.investedAmount.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-[#B0B0B0]">Avg Price</p>
-                        <p className="font-semibold text-foreground">₹{holding.avgPrice}</p>
-                      </div>
-                      <div>
-                        <p className="text-[#B0B0B0]">P&L</p>
-                        <p className={`font-semibold ${holding.currentValue > holding.investedAmount ? 'text-primary' : 'text-destructive'}`}>
-                          ₹{(holding.currentValue - holding.investedAmount).toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
+              {portfolioData.holdings.length === 0 ? (
+                <Card className="bg-card border-border">
+                  <CardContent className="p-8 text-center">
+                    <p className="text-muted-foreground">No holdings found</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Connect your trading account to view your portfolio
+                    </p>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                portfolioData.holdings.map((holding, index) => (
+                  <Card key={index} className="bg-card border-border">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="text-lg font-bold text-foreground">{holding.tradingsymbol}</h3>
+                          <p className="text-sm text-[#B0B0B0]">{holding.quantity} shares</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className={`text-right ${holding.pnl > 0 ? 'text-primary' : 'text-destructive'}`}>
+                            <p className="font-semibold">₹{holding.pnl.toLocaleString()}</p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={handleBuyTrim}
+                            className="flex items-center gap-1"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Buy/Trim
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-[#B0B0B0]">Current Value</p>
+                          <p className="font-semibold text-foreground">₹{(holding.last_price * holding.quantity).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#B0B0B0]">Invested</p>
+                          <p className="font-semibold text-foreground">₹{(holding.average_price * holding.quantity).toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#B0B0B0]">Avg Price</p>
+                          <p className="font-semibold text-foreground">₹{holding.average_price.toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[#B0B0B0]">LTP</p>
+                          <p className="font-semibold text-foreground">₹{holding.last_price.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </TabsContent>
         </Tabs>
