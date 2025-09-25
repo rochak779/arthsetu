@@ -33,16 +33,40 @@ alter table public.alerts enable row level security;
 
 -- Policies
 -- Read: user can read their own alerts or global alerts (user_id is null)
-create policy if not exists "alerts_select_own_or_global" on public.alerts
-  for select using (auth.uid() = user_id or user_id is null);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'alerts' and policyname = 'alerts_select_own_or_global'
+  ) then
+    create policy "alerts_select_own_or_global" on public.alerts
+      for select using (auth.uid() = user_id or user_id is null);
+  end if;
+end$$;
 
 -- Update: user can update lifecycle fields of their own alerts
-create policy if not exists "alerts_update_own" on public.alerts
-  for update using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'alerts' and policyname = 'alerts_update_own'
+  ) then
+    create policy "alerts_update_own" on public.alerts
+      for update using (auth.uid() = user_id)
+      with check (auth.uid() = user_id);
+  end if;
+end$$;
 
 -- Optional: prevent arbitrary inserts by clients (only service role inserts, which bypasses RLS)
 -- No explicit insert policy created; service role bypasses RLS by design.
 
--- Realtime publication
-alter publication supabase_realtime add table public.alerts;
+-- Realtime publication (idempotent)
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'alerts'
+  ) then
+    alter publication supabase_realtime add table public.alerts;
+  end if;
+end$$;
