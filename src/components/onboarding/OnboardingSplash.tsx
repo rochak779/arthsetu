@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import logo from "@/assets/logo101.svg";
+import logo from "@/assets/logo007.svg";
 
 interface OnboardingSplashProps {
   onComplete: () => void;

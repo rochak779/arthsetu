@@ -5,7 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import logo from "@/assets/logo101.svg";
+import logo from "@/assets/logo007.svg";
 
 const Signup = () => {
   const navigate = useNavigate();
