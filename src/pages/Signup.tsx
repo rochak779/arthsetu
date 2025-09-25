@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import logo from "@/assets/logo101.svg";
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -73,6 +74,11 @@ const Signup = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-md space-y-8">
+        {/* Logo */}
+        <div className="flex justify-center">
+          <img src={logo} alt="ArthSetu Logo" className="h-16 w-auto" />
+        </div>
+        
         {/* Progress indicator */}
         <div className="text-center">
           <p className="text-muted-foreground">Step 1 of 3</p>

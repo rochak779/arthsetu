@@ -41,10 +41,10 @@ const OnboardingSplash = ({ onComplete }: OnboardingSplashProps) => {
             <img 
               src={logo} 
               alt="ArthSetu Logo" 
-              className="h-24 w-24"
+              className="h-24 w-auto"
             />
             {/* Glow effect */}
-            <div className="absolute inset-0 h-24 w-24 rounded-full bg-primary/20 blur-xl animate-pulse" />
+            <div className="absolute inset-0 h-24 w-auto rounded-full bg-primary/20 blur-xl animate-pulse" />
           </div>
         </div>
 
