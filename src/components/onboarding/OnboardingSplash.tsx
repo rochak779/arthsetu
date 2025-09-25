@@ -40,7 +40,7 @@ const OnboardingSplash = ({ onComplete }: OnboardingSplashProps) => {
           <div className="relative">
             <img 
               src={logo} 
-              alt="ArthSetu Logo" 
+              alt="App logo" 
               className="h-24 w-auto"
             />
             {/* Glow effect */}
@@ -48,16 +48,7 @@ const OnboardingSplash = ({ onComplete }: OnboardingSplashProps) => {
           </div>
         </div>
 
-        {/* App name */}
-        <div 
-          className={`transform transition-all duration-1000 delay-300 ease-out ${
-            isVisible 
-              ? 'opacity-100 translate-y-0' 
-              : 'opacity-0 translate-y-4'
-          }`}
-        >
-          <h1 className="text-3xl font-bold text-foreground">ArthSetu</h1>
-        </div>
+        {/* App name removed for logo-only branding */}
 
         {/* Tagline */}
         <div 

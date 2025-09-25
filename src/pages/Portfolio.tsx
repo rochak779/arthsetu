@@ -48,10 +48,9 @@ const Portfolio = () => {
     <div className="min-h-screen bg-background pb-20">
       <div className="px-6 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+  <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="ArthSetu Logo" className="h-8 w-8" />
-            <span className="text-xl font-bold text-foreground">ArthSetu</span>
+            <img src={logo} alt="App logo" className="h-16 w-32 object-contain" />
           </div>
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-foreground">Portfolio</h1>

@@ -8,7 +8,7 @@ const Landing = () => {
       <div className="w-full max-w-md space-y-8 text-center">
         {/* Logo */}
         <div className="flex justify-center">
-          <img src={logo} alt="ArthSetu Logo" className="h-16 w-auto" />
+          <img src={logo} alt="App logo" className="h-16 w-auto" />
         </div>
         
         {/* Tagline */}

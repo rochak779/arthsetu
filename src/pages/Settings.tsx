@@ -176,9 +176,8 @@ const Settings = () => {
     return (
       <div className="min-h-screen bg-background pb-20">
         <div className="px-6 py-8">
-          <div className="flex items-center gap-3 mb-8">
-            <img src={logo} alt="ArthSetu" className="h-8 w-8" />
-            <span className="text-xl font-bold text-foreground">ArthSetu</span>
+          <div className="flex items-center gap-3 mb-2">
+            <img src={logo} alt="App logo" className="h-16 w-32 object-contain" />
           </div>
           
           <Card className="bg-card border-border">
@@ -201,9 +200,8 @@ const Settings = () => {
     <div className="min-h-screen bg-background pb-20">
       <div className="px-6 py-8">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <img src={logo} alt="ArthSetu" className="h-8 w-8" />
-          <span className="text-xl font-bold text-foreground">ArthSetu</span>
+        <div className="flex items-center gap-3 mb-2">
+          <img src={logo} alt="App logo" className="h-16 w-32 object-contain" />
         </div>
 
         {/* User Profile Section */}
@@ -252,7 +250,7 @@ const Settings = () => {
         )}
 
         {/* Connections Section */}
-        <Card className="bg-card border-border mb-8">
+        <Card className="bg-card border-border mb-24">
           <CardContent className="p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">Connections</h3>
             <div className="space-y-4">

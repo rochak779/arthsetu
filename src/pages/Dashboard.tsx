@@ -85,12 +85,11 @@ const Dashboard = () => {
     }
   };
   return <div className="min-h-screen bg-background pb-20">
-      <div className="w-full max-w-md mx-auto px-6 py-8 space-y-6">
+  <div className="w-full max-w-md mx-auto px-6 py-8 space-y-1">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-0">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="ArthSetu Logo" className="h-8 w-8" />
-            <span className="text-xl font-bold text-foreground">ArthSetu</span>
+            <img src={logo} alt="App logo" className="h-16 w-32 object-contain" />
           </div>
           <h1 className="text-xl font-bold text-foreground">Alerts</h1>
         </div>
