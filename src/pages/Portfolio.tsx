@@ -77,7 +77,7 @@ const Portfolio = () => {
                   ₹{portfolioData.totalValue.toLocaleString()}
                 </p>
               </div>
-              <div>
+              <div className="text-right">
                 <p className="text-sm text-[#B0B0B0]">Total Invested</p>
                 <p className="text-xl font-semibold text-foreground">
                   ₹{portfolioData.totalInvested.toLocaleString()}
