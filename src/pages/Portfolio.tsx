@@ -6,7 +6,7 @@ import { TrendingUp, TrendingDown, RefreshCw, ExternalLink } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { format } from "date-fns";
-import logo from "@/assets/logo.svg";
+import logo from "@/assets/logo1.svg";
 
 const Portfolio = () => {
   const { portfolioData, isLoading, isRefreshing, refreshPortfolio } = usePortfolioData();

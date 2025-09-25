@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, AlertTriangle, Clock, Star, Send } from "lucide-react";
 import BottomTabBar from "@/components/BottomTabBar";
-import logo from "@/assets/logo.svg";
+import logo from "@/assets/logo1.svg";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
