@@ -5,7 +5,7 @@ import { TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import { useMarketData } from "@/hooks/useMarketData";
 import { format } from "date-fns";
 import { useIndices } from "@/hooks/useIndices";
-import logo from "@/assets/logo1.svg";
+import logo from "@/assets/logo101.svg";
 
 // Default/fallback data structure
 const formatStockData = (apiData: any[]): any[] => {
