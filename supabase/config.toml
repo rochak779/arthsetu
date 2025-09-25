@@ -72,3 +72,6 @@ verify_jwt = false
 
 [functions.indices-snapshot]
 verify_jwt = false
+
+[functions.alerts-webhook]
+verify_jwt = false
