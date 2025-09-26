@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useConversation } from '@11labs/react';
+import { useConversation } from '@elevenlabs/react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,12 +39,12 @@ export const useElevenLabsVoice = (): UseElevenLabsVoiceReturn => {
       console.log('📨 ElevenLabs message:', message);
       // Handle different message types if needed
     },
-    onError: (error) => {
+    onError: (error: string) => {
       console.error('❌ ElevenLabs error:', error);
-      setError(error.message || 'Voice assistant error');
+      setError(error || 'Voice assistant error');
       toast({
         title: "Voice Error",
-        description: error.message || 'Something went wrong with the voice assistant',
+        description: error || 'Something went wrong with the voice assistant',
         variant: "destructive",
       });
     },
@@ -69,9 +69,9 @@ export const useElevenLabsVoice = (): UseElevenLabsVoiceReturn => {
         throw new Error('No signed URL received from server');
       }
 
-      // Start the conversation with the signed URL
+      // Start the conversation with the signed URL  
       const conversationId = await conversation.startSession({ 
-        url: data.signed_url 
+        signedUrl: data.signed_url 
       });
       
       conversationIdRef.current = conversationId;
