@@ -54,8 +54,11 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in market-data function:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch market data';
+    
     return new Response(JSON.stringify({ 
-      error: error.message || 'Failed to fetch market data' 
+      error: errorMessage
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

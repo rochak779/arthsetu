@@ -87,11 +87,19 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Critical error in kite-login-url function:', error);
-    console.error('Error stack:', error.stack);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorName = error instanceof Error ? error.name : 'Error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    if (errorStack) {
+      console.error('Error stack:', errorStack);
+    }
+    
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      details: error.message,
-      type: error.name,
+      details: errorMessage,
+      type: errorName,
       timestamp: new Date().toISOString()
     }), {
       status: 500,
