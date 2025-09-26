@@ -1,41 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, AlertTriangle, Clock, Star, Send } from "lucide-react";
+import { TrendingUp, AlertTriangle, Clock, Send, Check, Archive } from "lucide-react";
 import BottomTabBar from "@/components/BottomTabBar";
 import logo from "@/assets/logo007.svg";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useAlerts, markAlertRead, archiveAlert } from "@/hooks/useAlerts";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSyncing, setIsSyncing] = useState(false);
-  const mockAlerts = [{
-    id: 1,
-    stock: "MAZDOCK",
-    summary: "Strong buy signal",
-    status: "buy",
-    priority: "high"
-  }, {
-    id: 2,
-    stock: "SBIN",
-    summary: "Consider trimming",
-    status: "trim",
-    priority: "high"
-  }, {
-    id: 3,
-    stock: "RELIANCE",
-    summary: "Hold position",
-    status: "hold",
-    priority: "high"
-  }, {
-    id: 4,
-    stock: "ITC",
-    summary: "Monitor closely",
-    status: "buy",
-    priority: "medium"
-  }];
+  const { alerts, loading } = useAlerts({ includeGlobal: true, status: "all", limit: 20 });
   const getStatusColor = (status: string) => {
     switch (status) {
       case "buy":
@@ -84,6 +61,34 @@ const Dashboard = () => {
       setIsSyncing(false);
     }
   };
+
+  // Derived metrics for summary cards
+  const totalAlerts = alerts.length;
+  const highPriority = useMemo(() => alerts.filter(a => a.priority === 'high').length, [alerts]);
+  const avgConfidence = useMemo(() => {
+    if (!alerts.length) return 0;
+    const score = (c?: string | null) => c === 'high' ? 100 : c === 'medium' ? 66 : c === 'low' ? 33 : 0;
+    const sum = alerts.reduce((acc, a) => acc + score(a.confidence), 0);
+    return Math.round(sum / alerts.length);
+  }, [alerts]);
+
+  const handleMarkRead = async (id: string) => {
+    try {
+      await markAlertRead(id);
+      toast({ title: "Marked as read" });
+    } catch (e: any) {
+      toast({ title: "Failed to mark as read", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  };
+
+  const handleArchive = async (id: string) => {
+    try {
+      await archiveAlert(id);
+      toast({ title: "Archived" });
+    } catch (e: any) {
+      toast({ title: "Failed to archive", description: e?.message ?? String(e), variant: "destructive" });
+    }
+  };
   return <div className="min-h-screen bg-background pb-20">
   <div className="w-full max-w-md mx-auto px-6 py-8 space-y-1">
         {/* Header */}
@@ -99,7 +104,7 @@ const Dashboard = () => {
           <Card className="bg-card border-border">
             <CardContent className="p-4 text-center">
               <TrendingUp className="h-6 w-6 text-primary mx-auto mb-2" />
-              <p className="text-2xl font-bold text-primary">4</p>
+              <p className="text-2xl font-bold text-primary">{totalAlerts}</p>
               <p className="text-xs text-muted-foreground">Total Alerts</p>
             </CardContent>
           </Card>
@@ -107,7 +112,7 @@ const Dashboard = () => {
           <Card className="bg-card border-border">
             <CardContent className="p-4 text-center">
               <AlertTriangle className="h-6 w-6 text-destructive mx-auto mb-2" />
-              <p className="text-2xl font-bold text-destructive">3</p>
+              <p className="text-2xl font-bold text-destructive">{highPriority}</p>
               <p className="text-xs text-muted-foreground">High Priority</p>
             </CardContent>
           </Card>
@@ -115,7 +120,7 @@ const Dashboard = () => {
           <Card className="bg-card border-border">
             <CardContent className="p-4 text-center">
               <Clock className="h-6 w-6 text-warning mx-auto mb-2" />
-              <p className="text-2xl font-bold text-warning">78%</p>
+              <p className="text-2xl font-bold text-warning">{avgConfidence}%</p>
               <p className="text-xs text-muted-foreground">Average Confidence</p>
             </CardContent>
           </Card>
@@ -136,24 +141,39 @@ const Dashboard = () => {
               {isSyncing ? "Syncing..." : "Sync to n8n"}
             </Button>
           </div>
-          
-          {mockAlerts.map(alert => <Card key={alert.id} className="bg-card border-border cursor-pointer hover:bg-card/80 transition-colors" onClick={() => navigate(`/alert/${alert.id}`)}>
+
+          {loading && (
+            <Card className="bg-card border-border">
+              <CardContent className="p-4 text-sm text-muted-foreground">Loading alerts…</CardContent>
+            </Card>
+          )}
+
+          {!loading && alerts.length === 0 && (
+            <Card className="bg-card border-border">
+              <CardContent className="p-4 text-sm text-muted-foreground">No alerts yet. They’ll show up here when available.</CardContent>
+            </Card>
+          )}
+
+          {!loading && alerts.map(alert => (
+            <Card key={alert.id} className="bg-card border-border cursor-pointer hover:bg-card/80 transition-colors" onClick={() => navigate(`/alert/${alert.id}`)}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div>
-                      <h3 className="text-lg font-bold text-foreground">{alert.stock}</h3>
-                      <p className="text-sm text-muted-foreground">{alert.summary}</p>
+                      <h3 className="text-lg font-bold text-foreground">{alert.symbol ?? alert.title ?? 'Alert'}</h3>
+                      {alert.summary && <p className="text-sm text-muted-foreground">{alert.summary}</p>}
                     </div>
-                    {alert.priority === "high"}
+                    {alert.priority === "high" && (
+                      <span className="ml-2 inline-flex items-center rounded-full bg-destructive/10 text-destructive text-[10px] px-2 py-0.5">HIGH</span>
+                    )}
                   </div>
-                  <div className={`text-sm font-semibold uppercase ${getStatusColor(alert.status)}`}>
-                    {alert.status}
+                  <div className={`text-sm font-semibold uppercase ${getStatusColor(alert.action)}`}>
+                    {alert.action}
                   </div>
                 </div>
                 
                 <div className="flex gap-3">
-                  {alert.status !== "hold" && (
+                  {alert.action !== "hold" && (
                     <>
                       <Button 
                         variant="outline" 
@@ -167,7 +187,7 @@ const Dashboard = () => {
                         View Details
                       </Button>
                       <Button 
-                        variant={getActionButtonVariant(alert.status)} 
+                        variant={getActionButtonVariant(alert.action)} 
                         size="sm" 
                         className="flex-1"
                         onClick={(e) => {
@@ -175,11 +195,11 @@ const Dashboard = () => {
                           handleKiteRedirect();
                         }}
                       >
-                        {getButtonText(alert.status)}
+                        {getButtonText(alert.action)}
                       </Button>
                     </>
                   )}
-                  {alert.status === "hold" && (
+                  {alert.action === "hold" && (
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -193,8 +213,31 @@ const Dashboard = () => {
                     </Button>
                   )}
                 </div>
+
+                {/* Secondary actions */}
+                <div className="mt-3 flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                    disabled={!alert.user_id}
+                    onClick={(e) => { e.stopPropagation(); handleMarkRead(alert.id); }}
+                  >
+                    <Check className="h-4 w-4 mr-1" /> Mark as Read
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                    disabled={!alert.user_id}
+                    onClick={(e) => { e.stopPropagation(); handleArchive(alert.id); }}
+                  >
+                    <Archive className="h-4 w-4 mr-1" /> Archive
+                  </Button>
+                </div>
               </CardContent>
-            </Card>)}
+            </Card>
+          ))}
         </div>
       </div>
       

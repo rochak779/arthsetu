@@ -170,6 +170,78 @@ export type Database = {
         }
         Relationships: []
       }
+      alerts: {
+        Row: {
+          id: string
+          user_id: string | null
+          external_id: string | null
+          symbol: string | null
+          title: string | null
+          summary: string | null
+          full_summary: string | null
+          action: "buy" | "trim" | "hold"
+          priority: "high" | "medium" | "low"
+          confidence: "high" | "medium" | "low"
+          last_price: number | null
+          change_pct: number | null
+          link: string | null
+          source: string | null
+          category: string | null
+          payload: Json | null
+          lifecycle_status: "new" | "read" | "archived"
+          read_at: string | null
+          archived_at: string | null
+          expires_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          external_id?: string | null
+          symbol?: string | null
+          title?: string | null
+          summary?: string | null
+          full_summary?: string | null
+          action?: "buy" | "trim" | "hold"
+          priority?: "high" | "medium" | "low"
+          confidence?: "high" | "medium" | "low"
+          last_price?: number | null
+          change_pct?: number | null
+          link?: string | null
+          source?: string | null
+          category?: string | null
+          payload?: Json | null
+          lifecycle_status?: "new" | "read" | "archived"
+          read_at?: string | null
+          archived_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          external_id?: string | null
+          symbol?: string | null
+          title?: string | null
+          summary?: string | null
+          full_summary?: string | null
+          action?: "buy" | "trim" | "hold"
+          priority?: "high" | "medium" | "low"
+          confidence?: "high" | "medium" | "low"
+          last_price?: number | null
+          change_pct?: number | null
+          link?: string | null
+          source?: string | null
+          category?: string | null
+          payload?: Json | null
+          lifecycle_status?: "new" | "read" | "archived"
+          read_at?: string | null
+          archived_at?: string | null
+          expires_at?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
