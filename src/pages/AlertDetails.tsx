@@ -150,25 +150,35 @@ const AlertDetails = () => {
           </Card>
 
           {/* Sources */}
-          {record?.payload?.sources?.length ? (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-foreground">Sources</h3>
-              <div className="space-y-2">
-                {record.payload.sources.map((source: any, index: number) => (
-                  <Card key={index} className="bg-card border-border">
-                    <CardContent className="p-3">
-                      <div className="flex items-center justify-between">
-                        <a href={source.url ?? '#'} target="_blank" rel="noreferrer" className="text-accent font-medium underline">
-                          {source.title ?? source.url}
-                        </a>
-                        <ExternalLink className="h-4 w-4 text-accent" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+          {(() => {
+            const payloadSources = Array.isArray((record as any)?.payload?.sources)
+              ? ((record as any).payload.sources as Array<{ title?: string; url?: string }>)
+              : [];
+            const fallback = record?.link || record?.source
+              ? [{ title: record.source ?? "Source", url: record.link ?? "#" }]
+              : [];
+            const allSources = payloadSources.length ? payloadSources : fallback;
+            if (!allSources.length) return null;
+            return (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground">Sources</h3>
+                <div className="space-y-2">
+                  {allSources.map((source, index) => (
+                    <Card key={index} className="bg-card border-border">
+                      <CardContent className="p-3">
+                        <div className="flex items-center justify-between">
+                          <a href={source.url ?? '#'} target="_blank" rel="noreferrer" className="text-accent font-medium underline">
+                            {source.title ?? source.url ?? 'Source'}
+                          </a>
+                          <ExternalLink className="h-4 w-4 text-accent" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
+            );
+          })()}
 
           {/* Action Buttons */}
           <div className="space-y-3 pt-4">
