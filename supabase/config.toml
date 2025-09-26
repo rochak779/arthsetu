@@ -75,3 +75,6 @@ verify_jwt = false
 
 [functions.alerts-webhook]
 verify_jwt = false
+
+[functions.elevenlabs-session]
+verify_jwt = true

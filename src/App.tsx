@@ -14,6 +14,7 @@ import Preferences from "./pages/Preferences";
 import Integration from "./pages/Integration";
 import Dashboard from "./pages/Dashboard";
 import Portfolio from "./pages/Portfolio";
+import Voice from "./pages/Voice";
 import Market from "./pages/Market";
 import Settings from "./pages/Settings";
 import AlertDetails from "./pages/AlertDetails";
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/integration" element={<Integration />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/voice" element={<Voice />} />
           <Route path="/market" element={<Market />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/alert/:id" element={<AlertDetails />} />
