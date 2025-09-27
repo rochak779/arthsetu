@@ -8,6 +8,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useMemo, useState } from "react";
 import { useAlerts, markAlertRead, archiveAlert } from "@/hooks/useAlerts";
+
+type PublishHoldingsResponse = {
+  success: boolean;
+  status?: 'queued-or-throttled';
+  event_id?: string;
+  webhook_url?: string;
+  holdings_count?: number;
+  total_value?: number;
+  error?: string;
+};
 const Dashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -40,15 +50,15 @@ const Dashboard = () => {
   const handleSyncToN8n = async () => {
     setIsSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('publish-holdings-webhook', {
-        body: { environment: 'test' }
+      const { data, error } = await supabase.functions.invoke<PublishHoldingsResponse>('publish-holdings-webhook', {
+        body: { environment: 'production' }
       });
       
       if (error) throw error;
-      if (data && (data as any).status === 'queued-or-throttled') {
+      if (data && data.status === 'queued-or-throttled') {
         toast({
           title: "Queued due to rate limit",
-          description: "n8n was throttled by ngrok. Delivery will retry with backoff in the background.",
+          description: "n8n/ngrok rate limit hit. We retried with backoff; please try again in ~1 min if needed.",
         });
       } else {
         toast({
@@ -82,8 +92,9 @@ const Dashboard = () => {
     try {
       await markAlertRead(id);
       toast({ title: "Marked as read" });
-    } catch (e: any) {
-      toast({ title: "Failed to mark as read", description: e?.message ?? String(e), variant: "destructive" });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast({ title: "Failed to mark as read", description: msg, variant: "destructive" });
     }
   };
 
@@ -91,8 +102,9 @@ const Dashboard = () => {
     try {
       await archiveAlert(id);
       toast({ title: "Archived" });
-    } catch (e: any) {
-      toast({ title: "Failed to archive", description: e?.message ?? String(e), variant: "destructive" });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast({ title: "Failed to archive", description: msg, variant: "destructive" });
     }
   };
   return <div className="min-h-screen bg-background pb-20">

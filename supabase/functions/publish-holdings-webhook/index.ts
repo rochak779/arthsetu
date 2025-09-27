@@ -35,7 +35,8 @@ Deno.serve(async (req) => {
     const { environment = 'test' } = await req.json().catch(() => ({}));
     
     // Determine webhook URL based on environment
-    const baseUrl = 'https://rickettsial-ericoid-tifany.ngrok-free.dev';
+    // You can override this in the Supabase Dashboard as a secret: N8N_BASE_URL
+    const baseUrl = Deno.env.get('N8N_BASE_URL') || 'https://rickettsial-ericoid-tifany.ngrok-free.dev';
     const webhookUrl = environment === 'production' 
       ? `${baseUrl}/webhook/holdings`
       : `${baseUrl}/webhook-test/holdings`;
@@ -115,7 +116,7 @@ Deno.serve(async (req) => {
       }
     };
 
-    console.log(`Sending webhook to: ${webhookUrl}`);
+  console.log(`Sending webhook to: ${webhookUrl}`);
     console.log(`Payload contains ${totalHoldings} holdings`);
 
     // Helper: retry/backoff for ngrok 403 rate limits
