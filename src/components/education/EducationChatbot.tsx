@@ -25,7 +25,7 @@ export const EducationChatbot = () => {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("https://intervalvular-greta-supersentimental.ngrok-free.app/webhook/academy");
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
