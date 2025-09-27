@@ -57,20 +57,20 @@ const Dashboard = () => {
       if (error) throw error;
       if (data && data.status === 'queued-or-throttled') {
         toast({
-          title: "Queued due to rate limit",
-          description: "n8n/ngrok rate limit hit. We retried with backoff; please try again in ~1 min if needed.",
+          title: "Analysis queued",
+          description: "We hit a temporary limit. Please try again in about a minute if it doesn't complete.",
         });
       } else {
         toast({
-          title: "Success",
-          description: "Holdings data synced to n8n successfully",
+          title: "Analysis started",
+          description: "We're analyzing your portfolio based on your latest holdings.",
         });
       }
     } catch (error) {
       console.error('Error syncing to n8n:', error);
       toast({
-        title: "Error",
-        description: "Failed to sync holdings to n8n",
+        title: "Couldn't start analysis",
+        description: "Please try again in a moment.",
         variant: "destructive",
       });
     } finally {
@@ -156,7 +156,7 @@ const Dashboard = () => {
               className="flex items-center gap-2"
             >
               <Send className="h-4 w-4" />
-              {isSyncing ? "Syncing..." : "Sync to n8n"}
+              {isSyncing ? "Analyzing..." : "Analyze Portfolio"}
             </Button>
           </div>
 
