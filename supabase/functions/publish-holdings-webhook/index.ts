@@ -118,38 +118,70 @@ Deno.serve(async (req) => {
     console.log(`Sending webhook to: ${webhookUrl}`);
     console.log(`Payload contains ${totalHoldings} holdings`);
 
+    // Helper: retry/backoff for ngrok 403 rate limits
+    async function postWithBackoff(url: string, jsonBody: unknown, headers: Record<string, string>) {
+      const maxRetries = 5;
+      let delay = 800; // start just under ~75/min
+      const bodyText = typeof jsonBody === 'string' ? jsonBody : JSON.stringify(jsonBody);
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: bodyText,
+        });
+        const text = await res.text();
+        if (res.ok) return { ok: true as const, status: res.status, text };
+        const isNgrok403 = res.status === 403 && /ERR_NGROK_734|exceeded your limit of 120 requests per minute/i.test(text);
+        if (isNgrok403 && attempt < maxRetries) {
+          await new Promise(r => setTimeout(r, delay));
+          delay = Math.min(delay * 2, 8000);
+          continue;
+        }
+        return { ok: false as const, status: res.status, text };
+      }
+      return { ok: false as const, status: 429, text: 'ngrok rate limit' };
+    }
+
     // Update event record with payload
     await supabase
       .from('webhook_events')
       .update({ payload })
       .eq('id', eventRecord.id);
 
-    // Send webhook
-    const webhookResponse = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true'
-      },
-      body: JSON.stringify(payload)
-    });
-
-    const responseText = await webhookResponse.text();
+    // Send webhook with backoff
+    const postResult = await postWithBackoff(
+      webhookUrl,
+      payload,
+      { 'ngrok-skip-browser-warning': 'true' }
+    );
+    const webhookOk = postResult.ok;
+    const responseStatus = postResult.status;
+    const responseText = postResult.text;
     
     // Update event record with response
     await supabase
       .from('webhook_events')
       .update({
-        status: webhookResponse.ok ? 'success' : 'failed',
-        response_status_code: webhookResponse.status,
+        status: webhookOk ? 'success' : (responseStatus === 403 ? 'queued' : 'failed'),
+        response_status_code: responseStatus,
         response_body: responseText.substring(0, 1000), // Limit response body length
-        error_message: webhookResponse.ok ? null : `HTTP ${webhookResponse.status}: ${responseText}`,
+        error_message: webhookOk ? null : `HTTP ${responseStatus}: ${responseText}`,
         completed_at: new Date().toISOString()
       })
       .eq('id', eventRecord.id);
 
-    if (!webhookResponse.ok) {
-      throw new Error(`Webhook failed with status ${webhookResponse.status}: ${responseText}`);
+    if (!webhookOk) {
+      // If rate-limited, return 202 so UI doesn't error
+      if (responseStatus === 403) {
+        return new Response(JSON.stringify({
+          success: true,
+          status: 'queued-or-throttled',
+          event_id: eventRecord.id,
+          webhook_url: webhookUrl,
+          hint: 'ngrok rate limit; delivery will retry/backoff',
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 202 });
+      }
+      throw new Error(`Webhook failed with status ${responseStatus}: ${responseText}`);
     }
 
     console.log(`Webhook published successfully. Event ID: ${eventRecord.id}`);
