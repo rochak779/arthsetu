@@ -19,6 +19,9 @@ import Market from "./pages/Market";
 import Settings from "./pages/Settings";
 import AlertDetails from "./pages/AlertDetails";
 import KiteCallback from "./pages/KiteCallback";
+import Education from "./pages/Education";
+import EducationCategory from "./pages/EducationCategory";
+import EducationLesson from "./pages/EducationLesson";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +45,9 @@ const App = () => (
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/voice" element={<Voice />} />
           <Route path="/market" element={<Market />} />
+          <Route path="/education" element={<Education />} />
+          <Route path="/education/category/:categoryId" element={<EducationCategory />} />
+          <Route path="/education/lesson/:lessonId" element={<EducationLesson />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/alert/:id" element={<AlertDetails />} />
           <Route path="/oauth/kite/callback" element={<KiteCallback />} />

@@ -1,4 +1,4 @@
-import { BarChart3, TrendingUp, Bell, Settings, Mic } from "lucide-react";
+import { BarChart3, TrendingUp, Bell, Settings, Mic, GraduationCap } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const BottomTabBar = () => {
@@ -10,6 +10,7 @@ const BottomTabBar = () => {
     { id: "portfolio", label: "Portfolio", icon: BarChart3, path: "/portfolio" },
     { id: "voice", label: "Voice", icon: Mic, path: "/voice" },
     { id: "market", label: "Market", icon: TrendingUp, path: "/market" },
+    { id: "learn", label: "Learn", icon: GraduationCap, path: "/education" },
     { id: "settings", label: "Settings", icon: Settings, path: "/settings" }
   ];
 

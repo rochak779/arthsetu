@@ -14,6 +14,193 @@ export type Database = {
   }
   public: {
     Tables: {
+      alerts: {
+        Row: {
+          action: string | null
+          archived_at: string | null
+          category: string | null
+          change_pct: number | null
+          confidence: string | null
+          created_at: string
+          expires_at: string | null
+          external_id: string | null
+          full_summary: string | null
+          id: string
+          last_price: number | null
+          lifecycle_status: string | null
+          link: string | null
+          payload: Json | null
+          priority: string | null
+          read_at: string | null
+          source: string | null
+          summary: string | null
+          symbol: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action?: string | null
+          archived_at?: string | null
+          category?: string | null
+          change_pct?: number | null
+          confidence?: string | null
+          created_at?: string
+          expires_at?: string | null
+          external_id?: string | null
+          full_summary?: string | null
+          id?: string
+          last_price?: number | null
+          lifecycle_status?: string | null
+          link?: string | null
+          payload?: Json | null
+          priority?: string | null
+          read_at?: string | null
+          source?: string | null
+          summary?: string | null
+          symbol?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string | null
+          archived_at?: string | null
+          category?: string | null
+          change_pct?: number | null
+          confidence?: string | null
+          created_at?: string
+          expires_at?: string | null
+          external_id?: string | null
+          full_summary?: string | null
+          id?: string
+          last_price?: number | null
+          lifecycle_status?: string | null
+          link?: string | null
+          payload?: Json | null
+          priority?: string | null
+          read_at?: string | null
+          source?: string | null
+          summary?: string | null
+          symbol?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      education_categories: {
+        Row: {
+          color: string
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          order_index: number
+          title: string
+        }
+        Insert: {
+          color: string
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          order_index: number
+          title: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          order_index?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      education_lessons: {
+        Row: {
+          category_id: string
+          created_at: string
+          description: string
+          difficulty: string
+          estimated_time: number
+          id: string
+          order_index: number
+          title: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          description: string
+          difficulty: string
+          estimated_time: number
+          id?: string
+          order_index: number
+          title: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          description?: string
+          difficulty?: string
+          estimated_time?: number
+          id?: string
+          order_index?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "education_lessons_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "education_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      education_slides: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          lesson_id: string
+          order_index: number
+          quiz_options: Json | null
+          slide_type: string
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          lesson_id: string
+          order_index: number
+          quiz_options?: Json | null
+          slide_type?: string
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          lesson_id?: string
+          order_index?: number
+          quiz_options?: Json | null
+          slide_type?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "education_slides_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "education_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kite_holdings: {
         Row: {
           average_price: number
@@ -167,78 +354,6 @@ export type Database = {
           status?: string
           user_id?: string
           webhook_url?: string
-        }
-        Relationships: []
-      }
-      alerts: {
-        Row: {
-          id: string
-          user_id: string | null
-          external_id: string | null
-          symbol: string | null
-          title: string | null
-          summary: string | null
-          full_summary: string | null
-          action: "buy" | "trim" | "hold"
-          priority: "high" | "medium" | "low"
-          confidence: "high" | "medium" | "low"
-          last_price: number | null
-          change_pct: number | null
-          link: string | null
-          source: string | null
-          category: string | null
-          payload: Json | null
-          lifecycle_status: "new" | "read" | "archived"
-          read_at: string | null
-          archived_at: string | null
-          expires_at: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          external_id?: string | null
-          symbol?: string | null
-          title?: string | null
-          summary?: string | null
-          full_summary?: string | null
-          action?: "buy" | "trim" | "hold"
-          priority?: "high" | "medium" | "low"
-          confidence?: "high" | "medium" | "low"
-          last_price?: number | null
-          change_pct?: number | null
-          link?: string | null
-          source?: string | null
-          category?: string | null
-          payload?: Json | null
-          lifecycle_status?: "new" | "read" | "archived"
-          read_at?: string | null
-          archived_at?: string | null
-          expires_at?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          external_id?: string | null
-          symbol?: string | null
-          title?: string | null
-          summary?: string | null
-          full_summary?: string | null
-          action?: "buy" | "trim" | "hold"
-          priority?: "high" | "medium" | "low"
-          confidence?: "high" | "medium" | "low"
-          last_price?: number | null
-          change_pct?: number | null
-          link?: string | null
-          source?: string | null
-          category?: string | null
-          payload?: Json | null
-          lifecycle_status?: "new" | "read" | "archived"
-          read_at?: string | null
-          archived_at?: string | null
-          expires_at?: string | null
-          created_at?: string
         }
         Relationships: []
       }
