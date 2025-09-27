@@ -357,6 +357,64 @@ export type Database = {
         }
         Relationships: []
       }
+      ,
+      market_sentiments: {
+        Row: {
+          tweet_id: string
+          symbol: string
+          tweet_text: string
+          tweet_created_at: string
+          author_id: string | null
+          lang: string | null
+          retweet_count: number | null
+          reply_count: number | null
+          like_count: number | null
+          quote_count: number | null
+          possibly_sensitive: boolean | null
+          sentiment_label: "positive" | "neutral" | "negative"
+          sentiment_score: number
+          model: string
+          analyzed_at: string
+          created_at: string
+        }
+        Insert: {
+          tweet_id: string
+          symbol: string
+          tweet_text: string
+          tweet_created_at: string
+          author_id?: string | null
+          lang?: string | null
+          retweet_count?: number | null
+          reply_count?: number | null
+          like_count?: number | null
+          quote_count?: number | null
+          possibly_sensitive?: boolean | null
+          sentiment_label: "positive" | "neutral" | "negative"
+          sentiment_score: number
+          model?: string
+          analyzed_at?: string
+          created_at?: string
+        }
+        Update: {
+          tweet_id?: string
+          symbol?: string
+          tweet_text?: string
+          tweet_created_at?: string
+          author_id?: string | null
+          lang?: string | null
+          retweet_count?: number | null
+          reply_count?: number | null
+          like_count?: number | null
+          quote_count?: number | null
+          possibly_sensitive?: boolean | null
+          sentiment_label?: "positive" | "neutral" | "negative"
+          sentiment_score?: number
+          model?: string
+          analyzed_at?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

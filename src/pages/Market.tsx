@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import BottomTabBar from "@/components/BottomTabBar";
-import { TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, RefreshCw, MessageSquare } from "lucide-react";
 import { useMarketData } from "@/hooks/useMarketData";
 import { format } from "date-fns";
 import { useIndices } from "@/hooks/useIndices";
 import logo from "@/assets/logo007.svg";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 // Default/fallback data structure
 const formatStockData = (apiData: any[]): any[] => {
@@ -76,6 +79,46 @@ const MarketSection = ({
 const Market = () => {
   const { trending, gainers, losers, isLoading, error, lastUpdated, refetch, hasData } = useMarketData();
   const { nifty, sensex, lastUpdated: idxUpdated, loading: idxLoading, error: idxError, refetch: refetchIdx } = useIndices();
+
+  // Market Sentiments state
+  type SentimentRow = Tables<"market_sentiments">;
+  const [sentimentSymbol, setSentimentSymbol] = useState("HDFCBANK");
+  const [sentiments, setSentiments] = useState<SentimentRow[]>([]);
+  const [sentimentLoading, setSentimentLoading] = useState(false);
+  const [sentimentError, setSentimentError] = useState<string | null>(null);
+
+  const loadSentiments = async (sym: string) => {
+    const { data, error } = await supabase
+      .from("market_sentiments")
+      .select("*")
+      .eq("symbol", sym.toUpperCase())
+      .order("tweet_created_at", { ascending: false })
+      .limit(20);
+    if (error) setSentimentError(error.message);
+    else setSentiments(data || []);
+  };
+
+  useEffect(() => {
+    loadSentiments(sentimentSymbol);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const analyzeSentiments = async () => {
+    setSentimentLoading(true);
+    setSentimentError(null);
+    try {
+      const { error } = await supabase.functions.invoke("analyze-market-sentiments", {
+        body: { symbol: sentimentSymbol.toUpperCase(), max: 20 },
+      });
+      if (error) throw error;
+      await loadSentiments(sentimentSymbol);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSentimentError(msg);
+    } finally {
+      setSentimentLoading(false);
+    }
+  };
 
   const trendingStocks = trending || [];
   const gainerStocks = gainers || [];
@@ -185,6 +228,79 @@ const Market = () => {
               </Button>
             </div>
           )}
+
+          {/* Market Sentiments Section */}
+          <section className="space-y-3">
+            <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" /> Market Sentiments
+            </h2>
+            <Card className="bg-card border-border">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    value={sentimentSymbol}
+                    onChange={(e) => setSentimentSymbol(e.target.value)}
+                    className="border rounded px-3 py-2 w-48 bg-background text-foreground"
+                    placeholder="Symbol (e.g., HDFCBANK)"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={sentimentLoading || !sentimentSymbol.trim()}
+                    onClick={analyzeSentiments}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${sentimentLoading ? 'animate-spin' : ''}`} />
+                    {sentimentLoading ? "Analyzing..." : "Analyze market sentiments"}
+                  </Button>
+                  {sentimentError && (
+                    <span className="text-xs text-destructive">{sentimentError}</span>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {sentiments.map((r) => (
+                    <Card key={r.tweet_id} className="bg-card/80 border-border">
+                      <CardContent className="p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${
+                            r.sentiment_label === 'positive' ? 'bg-emerald-100 text-emerald-700' :
+                            r.sentiment_label === 'negative' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {r.sentiment_label}
+                          </span>
+                          <time className="text-[10px] text-muted-foreground">
+                            {new Date(r.tweet_created_at).toLocaleString()}
+                          </time>
+                        </div>
+                        <p className="mt-2 text-sm text-foreground whitespace-pre-wrap">{r.tweet_text}</p>
+                        <div className="mt-2 text-xs text-muted-foreground flex items-center gap-3">
+                          <a
+                            className="text-primary hover:underline"
+                            href={`https://twitter.com/i/web/status/${r.tweet_id}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            View on Twitter
+                          </a>
+                          <span>Score: {Number(r.sentiment_score ?? 0).toFixed(2)}</span>
+                          <span>Model: {r.model}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {sentiments.length === 0 && (
+                    <Card className="bg-card/80 border-border">
+                      <CardContent className="p-4 text-sm text-muted-foreground">
+                        No sentiments yet for {sentimentSymbol.toUpperCase()}. Try analyzing.
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </section>
         </div>
       </div>
       
