@@ -25,7 +25,11 @@ export const EducationChatbot = () => {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState("https://intervalvular-greta-supersentimental.ngrok-free.app/webhook-test/academy");
+  const [webhookUrl, setWebhookUrl] = useState(() => {
+    const saved = localStorage.getItem("education-chatbot-webhook-url");
+    return saved || "https://intervalvular-greta-supersentimental.ngrok-free.app/webhook/academy";
+  });
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -35,13 +39,82 @@ export const EducationChatbot = () => {
     }
   }, [messages]);
 
-  const sendMessage = async () => {
+  useEffect(() => {
+    localStorage.setItem("education-chatbot-webhook-url", webhookUrl);
+  }, [webhookUrl]);
+
+  const validateUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return url.startsWith('http://') || url.startsWith('https://');
+    } catch {
+      return false;
+    }
+  };
+
+  const testConnection = async () => {
+    if (!validateUrl(webhookUrl)) {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid webhook URL starting with http:// or https://",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingConnection(true);
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: "Connection test",
+          timestamp: new Date().toISOString(),
+          source: "education_chatbot_test"
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Connection Successful",
+          description: "Webhook is responding correctly!",
+        });
+      } else {
+        toast({
+          title: "Connection Failed",
+          description: `Server responded with status ${response.status}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      let description = "Failed to connect to webhook.";
+      
+      if (errorMessage.includes("CORS")) {
+        description = "CORS error: Webhook must allow requests from this domain.";
+      } else if (errorMessage.includes("network")) {
+        description = "Network error: Check your internet connection and webhook URL.";
+      }
+      
+      toast({
+        title: "Connection Test Failed",
+        description,
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
+  const sendMessage = async (retryCount = 0) => {
     if (!inputValue.trim()) return;
     
-    if (!webhookUrl) {
+    if (!validateUrl(webhookUrl)) {
       toast({
-        title: "Setup Required",
-        description: "Please enter your n8n webhook URL in the settings below",
+        title: "Invalid Webhook URL",
+        description: "Please enter a valid webhook URL starting with http:// or https://",
         variant: "destructive",
       });
       return;
@@ -81,21 +154,47 @@ export const EducationChatbot = () => {
         };
         setMessages(prev => [...prev, botMessage]);
       } else {
-        throw new Error("Failed to get response");
+        throw new Error(`Server responded with status ${response.status}`);
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      const errorMessage: Message = {
+      
+      // Retry logic for network errors
+      if (retryCount < 2 && error instanceof Error && (
+        error.message.includes("network") || 
+        error.message.includes("fetch")
+      )) {
+        setTimeout(() => sendMessage(retryCount + 1), 1000 * (retryCount + 1));
+        return;
+      }
+      
+      let errorText = "I'm having trouble connecting right now. Please try again later or check your webhook configuration.";
+      let toastDescription = "Failed to connect to the chatbot service. Please check your webhook URL.";
+      
+      const errorString = error instanceof Error ? error.message : "Unknown error";
+      
+      if (errorString.includes("CORS")) {
+        errorText = "There's a CORS (Cross-Origin) issue with the webhook. Please configure your webhook to allow requests from this domain.";
+        toastDescription = "CORS error: The webhook must be configured to accept requests from this domain.";
+      } else if (errorString.includes("404")) {
+        errorText = "The webhook endpoint was not found. Please check the URL path.";
+        toastDescription = "404 error: Webhook endpoint not found. Please verify the URL.";
+      } else if (errorString.includes("500")) {
+        errorText = "The webhook server encountered an error. Please try again later.";
+        toastDescription = "Server error: The webhook service is experiencing issues.";
+      }
+      
+      const botErrorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "I'm having trouble connecting right now. Please try again later or check your webhook configuration.",
+        text: errorText,
         sender: "bot",
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, botErrorMessage]);
       
       toast({
         title: "Connection Error",
-        description: "Failed to connect to the chatbot service. Please check your webhook URL.",
+        description: toastDescription,
         variant: "destructive",
       });
     } finally {
@@ -202,22 +301,36 @@ export const EducationChatbot = () => {
                 disabled={isLoading}
                 className="flex-1"
               />
-              <Button
-                onClick={sendMessage}
-                disabled={isLoading || !inputValue.trim()}
-                size="sm"
-              >
+                <Button
+                  onClick={() => sendMessage()}
+                  disabled={isLoading || !inputValue.trim()}
+                  size="sm"
+                >
                 <Send className="h-4 w-4" />
               </Button>
             </div>
             
-            <div className="text-xs">
-              <Input
-                placeholder="n8n webhook URL (configure once)"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                className="text-xs h-8"
-              />
+            <div className="space-y-2 text-xs">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Webhook URL (e.g., https://your-webhook.ngrok.app/webhook/academy)"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  className="text-xs h-8 flex-1"
+                />
+                <Button
+                  onClick={testConnection}
+                  disabled={isTestingConnection || !webhookUrl.trim()}
+                  size="sm"
+                  variant="outline"
+                  className="h-8 px-3 text-xs"
+                >
+                  {isTestingConnection ? "Testing..." : "Test"}
+                </Button>
+              </div>
+              {!validateUrl(webhookUrl) && webhookUrl.trim() && (
+                <p className="text-destructive text-xs">Please enter a valid URL starting with http:// or https://</p>
+              )}
             </div>
           </div>
         </CardContent>
