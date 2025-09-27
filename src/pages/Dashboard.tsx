@@ -40,16 +40,22 @@ const Dashboard = () => {
   const handleSyncToN8n = async () => {
     setIsSyncing(true);
     try {
-      const { error } = await supabase.functions.invoke('publish-holdings-webhook', {
+      const { data, error } = await supabase.functions.invoke('publish-holdings-webhook', {
         body: { environment: 'test' }
       });
       
       if (error) throw error;
-      
-      toast({
-        title: "Success",
-        description: "Holdings data synced to n8n successfully",
-      });
+      if (data && (data as any).status === 'queued-or-throttled') {
+        toast({
+          title: "Queued due to rate limit",
+          description: "n8n was throttled by ngrok. Delivery will retry with backoff in the background.",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Holdings data synced to n8n successfully",
+        });
+      }
     } catch (error) {
       console.error('Error syncing to n8n:', error);
       toast({
