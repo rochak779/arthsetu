@@ -15,6 +15,46 @@ interface Message {
 }
 
 export const EducationChatbot = () => {
+  // Attempts to extract a useful response string from various API shapes
+  const extractBotResponse = (data: unknown, plainTextFallback: string): string => {
+    if (typeof data === 'string') return data;
+    if (data && typeof data === 'object') {
+      const obj = data as Record<string, unknown>;
+      const directKeys = [
+        'response',
+        'reply',
+        'message',
+        'text',
+        'answer',
+        'content',
+      ];
+      for (const k of directKeys) {
+        const v = obj[k];
+        if (typeof v === 'string' && v.trim()) return v;
+      }
+      // OpenAI-like shapes
+      try {
+        const choices = obj['choices'];
+        if (Array.isArray(choices) && choices.length > 0) {
+          const first = choices[0] as any;
+          const msgContent = first?.message?.content || first?.delta?.content;
+          if (typeof msgContent === 'string' && msgContent.trim()) return msgContent;
+        }
+      } catch {}
+      // Nested common containers
+      const dataField = obj['data'];
+      if (dataField && typeof dataField === 'object') {
+        const inner = dataField as Record<string, unknown>;
+        for (const k of directKeys) {
+          const v = inner[k];
+          if (typeof v === 'string' && v.trim()) return v;
+        }
+      }
+    }
+    // Fallback to any plain text body if present
+    if (typeof plainTextFallback === 'string' && plainTextFallback.trim()) return plainTextFallback;
+    return "I received your question and I'm processing it. Let me think about the best way to help you learn!";
+  };
   // Helper for detailed request/response logging
   const fetchWithLogs = async (
     url: string,
@@ -161,7 +201,13 @@ export const EducationChatbot = () => {
       );
 
       if (res.ok) {
-        toast({ title: "Connection Successful", description: "Webhook is responding correctly!" });
+        // Optionally parse and show a small preview
+        let preview = "";
+        try {
+          const parsed = JSON.parse(text);
+          preview = extractBotResponse(parsed, text).slice(0, 80);
+        } catch { preview = text.slice(0, 80); }
+        toast({ title: "Connection Successful", description: preview ? `Reply: ${preview}` : "Webhook is responding correctly!" });
       } else {
         toast({ title: "Connection Failed", description: `Status ${res.status}. Body: ${text.slice(0, 140)}`, variant: "destructive" });
       }
@@ -222,16 +268,8 @@ export const EducationChatbot = () => {
       );
       if (!res.ok) throw new Error(`Server responded with status ${res.status}: ${text.slice(0, 280)}`);
       let data: unknown;
-      try { data = JSON.parse(text); } catch { data = { response: text } as { response: string }; }
-      const responseText = (() => {
-        if (typeof data === 'string') return data;
-        if (data && typeof data === 'object') {
-          const obj = data as Record<string, unknown>;
-          if (typeof obj.response === 'string') return obj.response;
-          if (typeof obj.text === 'string') return obj.text;
-        }
-        return "I received your question and I'm processing it. Let me think about the best way to help you learn!";
-      })();
+      try { data = JSON.parse(text); } catch { data = text; }
+      const responseText = extractBotResponse(data, text);
       const botMessage: Message = { id: (Date.now() + 1).toString(), text: responseText, sender: "bot", timestamp: new Date() };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
