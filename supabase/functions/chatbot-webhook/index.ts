@@ -48,7 +48,7 @@ Deno.serve(async (req: Request) => {
 
     const upstreamRes = await fetch(target, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "ngrok-skip-browser-warning": "true" },
       body: bodyText,
     }).catch((e) => {
       console.error(`[chatbot][${reqId}] upstream fetch error`, String(e));
