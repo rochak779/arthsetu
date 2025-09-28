@@ -7,14 +7,19 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
-const allowCors = (resp: Response) => {
+function withCors(req: Request, resp: Response) {
+  const origin = req.headers.get("origin") ?? "*";
+  const requestedHeaders = req.headers.get("access-control-request-headers")
+    ?? "authorization,apikey,content-type,x-client-info";
   const h = new Headers(resp.headers);
-  // Permissive CORS for debugging; consider restricting in production
-  if (!h.has("access-control-allow-origin")) h.set("access-control-allow-origin", "*");
-  h.set("access-control-allow-headers", "authorization, content-type");
+  h.set("access-control-allow-origin", origin);
   h.set("access-control-allow-methods", "POST, OPTIONS");
+  h.set("access-control-allow-headers", requestedHeaders);
+  // Help caches & proxies vary by origin/headers
+  const varyPrev = h.get("vary");
+  h.set("vary", varyPrev ? `${varyPrev}, origin, access-control-request-headers` : "origin, access-control-request-headers");
   return new Response(resp.body, { status: resp.status, headers: h });
-};
+}
 
 function redactHeaders(h: Headers): Record<string, string> {
   const obj: Record<string, string> = {};
@@ -27,7 +32,20 @@ Deno.serve(async (req: Request) => {
   const started = Date.now();
   try {
     if (req.method === "OPTIONS") {
-      return allowCors(new Response(null, { status: 204 }));
+      const origin = req.headers.get("origin") ?? "*";
+      const requestedHeaders = req.headers.get("access-control-request-headers")
+        ?? "authorization,apikey,content-type,x-client-info";
+      return new Response(null, {
+        status: 204,
+        headers: new Headers({
+          "access-control-allow-origin": origin,
+          "access-control-allow-methods": "POST, OPTIONS",
+          "access-control-allow-headers": requestedHeaders,
+          "vary": "origin, access-control-request-headers",
+          // Optionally cache preflight for a bit
+          "access-control-max-age": "600",
+        }),
+      });
     }
 
     const url = new URL(req.url);
@@ -40,7 +58,8 @@ Deno.serve(async (req: Request) => {
     const target = Deno.env.get("CHATBOT_TARGET_URL") || "";
     if (!target) {
       console.warn(`[chatbot][${reqId}] CHATBOT_TARGET_URL not set`);
-      return allowCors(
+      return withCors(
+        req,
         new Response(JSON.stringify({ error: "target_not_configured" }), {
           status: 500,
           headers: { "content-type": "application/json" },
@@ -65,14 +84,16 @@ Deno.serve(async (req: Request) => {
     });
 
     const contentType = upstreamRes.headers.get("content-type") || "application/json";
-    return allowCors(
+    return withCors(
+      req,
       new Response(text, { status: upstreamRes.status, headers: { "content-type": contentType } })
     );
   } catch (e: unknown) {
     const ms = Date.now() - started;
     const msg = typeof e === "object" && e && "message" in e ? String((e as { message: unknown }).message) : String(e);
     console.error(`[chatbot][${reqId}] error after ${ms}ms`, msg);
-    return allowCors(
+    return withCors(
+      req,
       new Response(
         JSON.stringify({ error: "chatbot_webhook_failed", details: msg }),
         { status: 502, headers: { "content-type": "application/json" } }
