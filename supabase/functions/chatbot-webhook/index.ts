@@ -2,8 +2,10 @@
 // Reads target URL from env CHATBOT_TARGET_URL
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // Local type shim for editors/linters; Supabase Edge runtime provides Deno at runtime.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-declare const Deno: any;
+declare const Deno: {
+  env: { get(name: string): string | undefined };
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+};
 
 const allowCors = (resp: Response) => {
   const h = new Headers(resp.headers);
@@ -68,7 +70,7 @@ Deno.serve(async (req: Request) => {
     );
   } catch (e: unknown) {
     const ms = Date.now() - started;
-    const msg = typeof e === "object" && e && "message" in e ? String((e as any).message) : String(e);
+    const msg = typeof e === "object" && e && "message" in e ? String((e as { message: unknown }).message) : String(e);
     console.error(`[chatbot][${reqId}] error after ${ms}ms`, msg);
     return allowCors(
       new Response(

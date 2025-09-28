@@ -30,8 +30,8 @@ export const EducationChatbot = () => {
         `[Chatbot][req ${reqId}] ${context.tag} → POST %s`,
         url,
         {
-          headers: (opts.headers as any) ?? {},
-          hasBody: !!(opts as any).body,
+          headers: opts.headers ?? {},
+          hasBody: opts.body != null,
           timeoutMs,
         }
       );
@@ -45,9 +45,12 @@ export const EducationChatbot = () => {
         { ok: res.ok, len: text.length, preview: text.slice(0, 300) }
       );
       return { res, text, ms } as const;
-    } catch (e: any) {
+    } catch (e: unknown) {
       const ms = Math.round(performance.now() - started);
-      console.error(`[Chatbot][err ${reqId}] ${context.tag} after ${ms}ms:`, e?.message || e);
+      const errMsg = (typeof e === 'object' && e && 'message' in e)
+        ? String((e as { message: unknown }).message)
+        : String(e);
+      console.error(`[Chatbot][err ${reqId}] ${context.tag} after ${ms}ms:`, errMsg);
       throw e;
     } finally {
       clearTimeout(to);
@@ -68,8 +71,8 @@ export const EducationChatbot = () => {
   const [webhookUrl, setWebhookUrl] = useState(() => {
     const savedRaw = localStorage.getItem("education-chatbot-webhook-url") ?? "";
     const saved = savedRaw.trim();
-    const envUrl = ((import.meta as any)?.env?.VITE_CHATBOT_WEBHOOK_URL as string | undefined) ?? undefined;
-    const isProd = Boolean((import.meta as any)?.env?.PROD);
+    const envUrl = import.meta.env.VITE_CHATBOT_WEBHOOK_URL ?? undefined;
+    const isProd = import.meta.env.PROD;
 
     const isValid = (u?: string) => !!u && /^https?:\/\//i.test(u);
 
@@ -80,9 +83,7 @@ export const EducationChatbot = () => {
       ? (isValid(envUrl) ? envUrl! : "")
       : (isValid(saved) ? saved : (isValid(envUrl) ? envUrl! : ""));
 
-    try {
-      console.info("[Chatbot] Using webhook URL:", finalUrl, { isProd, envUrl, hasSaved: saved.length > 0 });
-    } catch {}
+    console.info("[Chatbot] Using webhook URL:", finalUrl, { isProd, envUrl, hasSaved: saved.length > 0 });
     return finalUrl;
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -96,7 +97,7 @@ export const EducationChatbot = () => {
   }, [messages]);
 
   useEffect(() => {
-    const isProd = Boolean((import.meta as any)?.env?.PROD);
+    const isProd = import.meta.env.PROD;
     if (isProd) return;
     // Only persist valid URLs in dev; remove key if invalid to avoid sticky bad values
     if (webhookUrl && /^https?:\/\//i.test(webhookUrl)) {
@@ -117,7 +118,7 @@ export const EducationChatbot = () => {
 
   const testConnection = async () => {
     if (!validateUrl(webhookUrl)) {
-      const isProd = Boolean((import.meta as any)?.env?.PROD);
+      const isProd = import.meta.env.PROD;
       toast({
         title: isProd ? "Webhook not configured" : "Invalid URL",
         description: isProd
@@ -181,7 +182,7 @@ export const EducationChatbot = () => {
     if (!inputValue.trim()) return;
     
     if (!validateUrl(webhookUrl)) {
-      const isProd = Boolean((import.meta as any)?.env?.PROD);
+      const isProd = import.meta.env.PROD;
       toast({
         title: isProd ? "Webhook not configured" : "Invalid Webhook URL",
         description: isProd
@@ -220,14 +221,20 @@ export const EducationChatbot = () => {
       );
 
       if (res.ok) {
-        let data: any;
-        try { data = JSON.parse(text); } catch { data = { response: text }; }
+        let data: unknown;
+        try { data = JSON.parse(text); } catch { data = { response: text } as { response: string }; }
+        const responseText = (() => {
+          if (typeof data === 'string') return data;
+          if (data && typeof data === 'object') {
+            const obj = data as Record<string, unknown>;
+            if (typeof obj.response === 'string') return obj.response;
+            if (typeof obj.text === 'string') return obj.text;
+          }
+          return "I received your question and I'm processing it. Let me think about the best way to help you learn!";
+        })();
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
-          text:
-            data.response ||
-            (typeof data.text === "string" && data.text) ||
-            "I received your question and I'm processing it. Let me think about the best way to help you learn!",
+          text: responseText,
           sender: "bot",
           timestamp: new Date()
         };
@@ -392,7 +399,7 @@ export const EducationChatbot = () => {
               </Button>
             </div>
             
-            {!(import.meta as any)?.env?.PROD && (
+            {!import.meta.env.PROD && (
               <div className="space-y-2 text-xs">
                 <div className="flex gap-2">
                   <Input
