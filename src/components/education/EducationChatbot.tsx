@@ -14,6 +14,46 @@ interface Message {
 }
 
 export const EducationChatbot = () => {
+  // Helper for detailed request/response logging
+  const fetchWithLogs = async (
+    url: string,
+    init: (RequestInit & { timeoutMs?: number }) | undefined,
+    context: { tag: string }
+  ) => {
+    const { timeoutMs = 20000, ...opts } = init || {};
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), timeoutMs);
+    const started = performance.now();
+    const reqId = Math.random().toString(36).slice(2, 8);
+    try {
+      console.info(
+        `[Chatbot][req ${reqId}] ${context.tag} → POST %s`,
+        url,
+        {
+          headers: (opts.headers as any) ?? {},
+          hasBody: !!(opts as any).body,
+          timeoutMs,
+        }
+      );
+      const res = await fetch(url, { ...opts, signal: ctrl.signal });
+      const ms = Math.round(performance.now() - started);
+      const text = await res.text();
+      console.info(
+        `[Chatbot][res ${reqId}] ${context.tag} ← %s in %dms`,
+        res.status,
+        ms,
+        { ok: res.ok, len: text.length, preview: text.slice(0, 300) }
+      );
+      return { res, text, ms } as const;
+    } catch (e: any) {
+      const ms = Math.round(performance.now() - started);
+      console.error(`[Chatbot][err ${reqId}] ${context.tag} after ${ms}ms:`, e?.message || e);
+      throw e;
+    } finally {
+      clearTimeout(to);
+    }
+  };
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -27,7 +67,13 @@ export const EducationChatbot = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState(() => {
     const saved = localStorage.getItem("education-chatbot-webhook-url");
-    return saved || "https://rickettsial-ericoid-tifany.ngrok-free.dev/webhook/academy";
+    const envUrl = (import.meta as any)?.env?.VITE_CHATBOT_WEBHOOK_URL as string | undefined;
+    const isProd = Boolean((import.meta as any)?.env?.PROD);
+    const chosen = isProd ? (envUrl || undefined) : (saved || envUrl);
+    const finalUrl = chosen || "https://intervalvular-greta-supersentimental.ngrok-free.app/webhook/academy";
+    // One-time log to confirm which URL is actually used at runtime
+    try { console.info("[Chatbot] Using webhook URL:", finalUrl, { isProd, envUrl, hasSaved: Boolean(saved) }); } catch {}
+    return finalUrl;
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -40,7 +86,10 @@ export const EducationChatbot = () => {
   }, [messages]);
 
   useEffect(() => {
-    localStorage.setItem("education-chatbot-webhook-url", webhookUrl);
+    const isProd = Boolean((import.meta as any)?.env?.PROD);
+    if (!isProd) {
+      localStorage.setItem("education-chatbot-webhook-url", webhookUrl);
+    }
   }, [webhookUrl]);
 
   const validateUrl = (url: string): boolean => {
@@ -64,19 +113,22 @@ export const EducationChatbot = () => {
 
     setIsTestingConnection(true);
     try {
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const { res, text } = await fetchWithLogs(
+        webhookUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: "Connection test",
+            timestamp: new Date().toISOString(),
+            source: "education_chatbot_test",
+          }),
+          timeoutMs: 15000,
         },
-        body: JSON.stringify({
-          message: "Connection test",
-          timestamp: new Date().toISOString(),
-          source: "education_chatbot_test"
-        }),
-      });
+        { tag: "testConnection" }
+      );
 
-      if (response.ok) {
+      if (res.ok) {
         toast({
           title: "Connection Successful",
           description: "Webhook is responding correctly!",
@@ -84,7 +136,7 @@ export const EducationChatbot = () => {
       } else {
         toast({
           title: "Connection Failed",
-          description: `Server responded with status ${response.status}`,
+          description: `Status ${res.status}. Body: ${text.slice(0, 140)}`,
           variant: "destructive",
         });
       }
@@ -132,29 +184,36 @@ export const EducationChatbot = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const { res, text } = await fetchWithLogs(
+        webhookUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: userMessage.text,
+            timestamp: new Date().toISOString(),
+            source: "education_chatbot",
+          }),
+          timeoutMs: 20000,
         },
-        body: JSON.stringify({
-          message: inputValue,
-          timestamp: new Date().toISOString(),
-          source: "education_chatbot"
-        }),
-      });
+        { tag: "sendMessage" }
+      );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (res.ok) {
+        let data: any;
+        try { data = JSON.parse(text); } catch { data = { response: text }; }
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
-          text: data.response || "I received your question and I'm processing it. Let me think about the best way to help you learn!",
+          text:
+            data.response ||
+            (typeof data.text === "string" && data.text) ||
+            "I received your question and I'm processing it. Let me think about the best way to help you learn!",
           sender: "bot",
           timestamp: new Date()
         };
         setMessages(prev => [...prev, botMessage]);
       } else {
-        throw new Error(`Server responded with status ${response.status}`);
+        throw new Error(`Server responded with status ${res.status}: ${text.slice(0, 280)}`);
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -182,6 +241,9 @@ export const EducationChatbot = () => {
       } else if (errorString.includes("500")) {
         errorText = "The webhook server encountered an error. Please try again later.";
         toastDescription = "Server error: The webhook service is experiencing issues.";
+      } else if (/\b(401|403)\b/.test(errorString)) {
+        errorText = "The webhook rejected the request (auth/permission). Verify any required keys or access rules.";
+        toastDescription = "Auth error: The webhook responded with 401/403.";
       }
       
       const botErrorMessage: Message = {
