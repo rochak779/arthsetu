@@ -70,7 +70,8 @@ export const EducationChatbot = () => {
     const envUrl = (import.meta as any)?.env?.VITE_CHATBOT_WEBHOOK_URL as string | undefined;
     const isProd = Boolean((import.meta as any)?.env?.PROD);
     const chosen = isProd ? (envUrl || undefined) : (saved || envUrl);
-    const finalUrl = chosen || "https://intervalvular-greta-supersentimental.ngrok-free.app/webhook/academy";
+    // No hardcoded fallback; in production require env, in dev allow empty until user sets it
+    const finalUrl = chosen || "";
     // One-time log to confirm which URL is actually used at runtime
     try { console.info("[Chatbot] Using webhook URL:", finalUrl, { isProd, envUrl, hasSaved: Boolean(saved) }); } catch {}
     return finalUrl;
@@ -103,9 +104,12 @@ export const EducationChatbot = () => {
 
   const testConnection = async () => {
     if (!validateUrl(webhookUrl)) {
+      const isProd = Boolean((import.meta as any)?.env?.PROD);
       toast({
-        title: "Invalid URL",
-        description: "Please enter a valid webhook URL starting with http:// or https://",
+        title: isProd ? "Webhook not configured" : "Invalid URL",
+        description: isProd
+          ? "Set VITE_CHATBOT_WEBHOOK_URL to your Supabase Function URL and redeploy."
+          : "Please enter a valid webhook URL starting with http:// or https://",
         variant: "destructive",
       });
       return;
@@ -164,9 +168,12 @@ export const EducationChatbot = () => {
     if (!inputValue.trim()) return;
     
     if (!validateUrl(webhookUrl)) {
+      const isProd = Boolean((import.meta as any)?.env?.PROD);
       toast({
-        title: "Invalid Webhook URL",
-        description: "Please enter a valid webhook URL starting with http:// or https://",
+        title: isProd ? "Webhook not configured" : "Invalid Webhook URL",
+        description: isProd
+          ? "Set VITE_CHATBOT_WEBHOOK_URL to your Supabase Function URL and redeploy."
+          : "Please enter a valid webhook URL starting with http:// or https://",
         variant: "destructive",
       });
       return;
@@ -372,28 +379,30 @@ export const EducationChatbot = () => {
               </Button>
             </div>
             
-            <div className="space-y-2 text-xs">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Webhook URL (e.g., https://your-webhook.ngrok.app/webhook/academy)"
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  className="text-xs h-8 flex-1"
-                />
-                <Button
-                  onClick={testConnection}
-                  disabled={isTestingConnection || !webhookUrl.trim()}
-                  size="sm"
-                  variant="outline"
-                  className="h-8 px-3 text-xs"
-                >
-                  {isTestingConnection ? "Testing..." : "Test"}
-                </Button>
+            {!(import.meta as any)?.env?.PROD && (
+              <div className="space-y-2 text-xs">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Webhook URL (e.g., http://localhost:54321/functions/v1/chatbot-webhook)"
+                    value={webhookUrl}
+                    onChange={(e) => setWebhookUrl(e.target.value)}
+                    className="text-xs h-8 flex-1"
+                  />
+                  <Button
+                    onClick={testConnection}
+                    disabled={isTestingConnection || !webhookUrl.trim()}
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-3 text-xs"
+                  >
+                    {isTestingConnection ? "Testing..." : "Test"}
+                  </Button>
+                </div>
+                {!validateUrl(webhookUrl) && webhookUrl.trim() && (
+                  <p className="text-destructive text-xs">Please enter a valid URL starting with http:// or https://</p>
+                )}
               </div>
-              {!validateUrl(webhookUrl) && webhookUrl.trim() && (
-                <p className="text-destructive text-xs">Please enter a valid URL starting with http:// or https://</p>
-              )}
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
