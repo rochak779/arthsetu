@@ -126,37 +126,44 @@ export const EducationChatbot = () => {
         source: "education_chatbot_test",
       };
 
-      const useDirect = !import.meta.env.PROD && validateUrl(webhookUrl);
-      if (useDirect) {
-        const { res, text } = await fetchWithLogs(
-          webhookUrl,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            timeoutMs: 15000,
-          },
-          { tag: "testConnection" }
-        );
-        if (res.ok) {
-          toast({ title: "Connection Successful", description: "Webhook is responding correctly!" });
-        } else {
-          toast({ title: "Connection Failed", description: `Status ${res.status}. Body: ${text.slice(0, 140)}`, variant: "destructive" });
-        }
+      // Resolve target URL: in prod use env-configured function URL; in dev allow local override
+      const targetUrl = import.meta.env.PROD
+        ? (import.meta.env.VITE_CHATBOT_WEBHOOK_URL || "")
+        : (validateUrl(webhookUrl) ? webhookUrl : (import.meta.env.VITE_CHATBOT_WEBHOOK_URL || ""));
+
+      if (!validateUrl(targetUrl)) {
+        toast({
+          title: import.meta.env.PROD ? "Webhook not configured" : "Invalid URL",
+          description: import.meta.env.PROD
+            ? "Set VITE_CHATBOT_WEBHOOK_URL to your Supabase Function URL and redeploy."
+            : "Please enter a valid webhook URL starting with http:// or https://",
+          variant: "destructive",
+        });
         return;
       }
 
-      // Default path: invoke Supabase Function so JWT is attached
-      const { data, error } = await supabase.functions.invoke("chatbot-webhook", { body: payload });
-      console.info("[Chatbot][invoke test]", { hasData: !!data, error });
-      if (error) {
-        const status = (error as any)?.status as number | undefined;
-        const msg = (error as Error).message || String(error);
-        let description = msg;
-        if (status === 401) description = "You're not signed in. Please log in to use the assistant.";
-        toast({ title: "Connection Failed", description, variant: "destructive" });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        toast({ title: "Not signed in", description: "Please log in to use the assistant.", variant: "destructive" });
+        return;
+      }
+
+      const { res, text } = await fetchWithLogs(
+        targetUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload),
+          timeoutMs: 15000,
+        },
+        { tag: "testConnection" }
+      );
+
+      if (res.ok) {
+        toast({ title: "Connection Successful", description: "Webhook is responding correctly!" });
       } else {
-        toast({ title: "Connection Successful", description: "Function responded correctly!" });
+        toast({ title: "Connection Failed", description: `Status ${res.status}. Body: ${text.slice(0, 140)}`, variant: "destructive" });
       }
     } finally {
       setIsTestingConnection(false);
@@ -166,7 +173,7 @@ export const EducationChatbot = () => {
   const sendMessage = async (retryCount = 0) => {
     if (!inputValue.trim()) return;
     
-    // No URL validation needed when invoking via Supabase (prod path). In dev, we allow direct URL if provided.
+  // We'll post manually to the function URL and attach only Authorization + Content-Type headers (no x-client-info)
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -185,45 +192,39 @@ export const EducationChatbot = () => {
         timestamp: new Date().toISOString(),
         source: "education_chatbot",
       };
-
-      const useDirect = !import.meta.env.PROD && validateUrl(webhookUrl);
-      if (useDirect) {
-        const { res, text } = await fetchWithLogs(
-          webhookUrl,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            timeoutMs: 20000,
-          },
-          { tag: "sendMessage" }
-        );
-        if (!res.ok) throw new Error(`Server responded with status ${res.status}: ${text.slice(0, 280)}`);
-        let data: unknown;
-        try { data = JSON.parse(text); } catch { data = { response: text } as { response: string }; }
-        const responseText = (() => {
-          if (typeof data === 'string') return data;
-          if (data && typeof data === 'object') {
-            const obj = data as Record<string, unknown>;
-            if (typeof obj.response === 'string') return obj.response;
-            if (typeof obj.text === 'string') return obj.text;
-          }
-          return "I received your question and I'm processing it. Let me think about the best way to help you learn!";
-        })();
-        const botMessage: Message = { id: (Date.now() + 1).toString(), text: responseText, sender: "bot", timestamp: new Date() };
-        setMessages(prev => [...prev, botMessage]);
+      const targetUrl = import.meta.env.PROD
+        ? (import.meta.env.VITE_CHATBOT_WEBHOOK_URL || "")
+        : (validateUrl(webhookUrl) ? webhookUrl : (import.meta.env.VITE_CHATBOT_WEBHOOK_URL || ""));
+      if (!validateUrl(targetUrl)) {
+        toast({
+          title: import.meta.env.PROD ? "Webhook not configured" : "Invalid URL",
+          description: import.meta.env.PROD
+            ? "Set VITE_CHATBOT_WEBHOOK_URL to your Supabase Function URL and redeploy."
+            : "Please enter a valid webhook URL starting with http:// or https://",
+          variant: "destructive",
+        });
         return;
       }
 
-      // Default path: invoke Supabase Function so JWT is attached
-      const { data, error } = await supabase.functions.invoke("chatbot-webhook", { body: payload });
-      if (error) {
-        const status = (error as any)?.status as number | undefined;
-        throw new Error(status ? `HTTP ${status}: ${(error as Error).message}` : (error as Error).message);
-      }
-      // Accept various shapes
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error("Not signed in");
+
+      const { res, text } = await fetchWithLogs(
+        targetUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify(payload),
+          timeoutMs: 20000,
+        },
+        { tag: "sendMessage" }
+      );
+      if (!res.ok) throw new Error(`Server responded with status ${res.status}: ${text.slice(0, 280)}`);
+      let data: unknown;
+      try { data = JSON.parse(text); } catch { data = { response: text } as { response: string }; }
       const responseText = (() => {
-        if (typeof data === 'string') return data as string;
+        if (typeof data === 'string') return data;
         if (data && typeof data === 'object') {
           const obj = data as Record<string, unknown>;
           if (typeof obj.response === 'string') return obj.response;
