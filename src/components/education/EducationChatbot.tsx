@@ -66,14 +66,23 @@ export const EducationChatbot = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState(() => {
-    const saved = localStorage.getItem("education-chatbot-webhook-url");
-    const envUrl = (import.meta as any)?.env?.VITE_CHATBOT_WEBHOOK_URL as string | undefined;
+    const savedRaw = localStorage.getItem("education-chatbot-webhook-url") ?? "";
+    const saved = savedRaw.trim();
+    const envUrl = ((import.meta as any)?.env?.VITE_CHATBOT_WEBHOOK_URL as string | undefined) ?? undefined;
     const isProd = Boolean((import.meta as any)?.env?.PROD);
-    const chosen = isProd ? (envUrl || undefined) : (saved || envUrl);
-    // No hardcoded fallback; in production require env, in dev allow empty until user sets it
-    const finalUrl = chosen || "";
-    // One-time log to confirm which URL is actually used at runtime
-    try { console.info("[Chatbot] Using webhook URL:", finalUrl, { isProd, envUrl, hasSaved: Boolean(saved) }); } catch {}
+
+    const isValid = (u?: string) => !!u && /^https?:\/\//i.test(u);
+
+    // Resolve initial URL:
+    // - In PROD: use env if valid, else empty (force configuration)
+    // - In DEV: prefer saved if valid; otherwise fall back to valid env; else empty until user sets it
+    const finalUrl = isProd
+      ? (isValid(envUrl) ? envUrl! : "")
+      : (isValid(saved) ? saved : (isValid(envUrl) ? envUrl! : ""));
+
+    try {
+      console.info("[Chatbot] Using webhook URL:", finalUrl, { isProd, envUrl, hasSaved: saved.length > 0 });
+    } catch {}
     return finalUrl;
   });
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -88,8 +97,12 @@ export const EducationChatbot = () => {
 
   useEffect(() => {
     const isProd = Boolean((import.meta as any)?.env?.PROD);
-    if (!isProd) {
+    if (isProd) return;
+    // Only persist valid URLs in dev; remove key if invalid to avoid sticky bad values
+    if (webhookUrl && /^https?:\/\//i.test(webhookUrl)) {
       localStorage.setItem("education-chatbot-webhook-url", webhookUrl);
+    } else {
+      localStorage.removeItem("education-chatbot-webhook-url");
     }
   }, [webhookUrl]);
 
