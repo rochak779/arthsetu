@@ -6,6 +6,16 @@ const corsHeaders = {
 }
 
 type HFLabel = 'positive' | 'neutral' | 'negative'
+type TwUser = {
+  id: string
+  username: string
+  name?: string
+  verified?: boolean
+  verified_type?: string | null
+  created_at?: string
+  protected?: boolean
+  public_metrics?: { followers_count: number }
+}
 
 type ReqBody = { symbol: string; max?: number }
 
@@ -40,14 +50,24 @@ Deno.serve(async (req) => {
       .maybeSingle()
     const since_id = state?.since_id ?? undefined
 
-    // Twitter search recent
-    const query = `${sym} -is:retweet -is:reply`
+    // Load trusted allowlist for this symbol
+    const { data: trusted } = await supabase
+      .from('trusted_accounts')
+      .select('handle')
+      .contains('symbols', [sym])
+    const allow = new Set((trusted ?? []).map(r => String((r as any).handle).toLowerCase()))
+
+    // Twitter search recent with author expansion
+    const fromClause = allow.size > 0 ? ` (${Array.from(allow).slice(0,20).map(h => `from:${h}`).join(' OR ')})` : ''
+    const query = `${sym} -is:retweet -is:reply${fromClause}`
     const url = new URL('https://api.twitter.com/2/tweets/search/recent')
     url.searchParams.set('query', query)
     url.searchParams.set('max_results', String(clamp(cap, 10, 50)))
     url.searchParams.set('sort_order', 'recency')
     if (since_id) url.searchParams.set('since_id', since_id)
-    url.searchParams.set('tweet.fields', 'created_at,lang,public_metrics,possibly_sensitive')
+    url.searchParams.set('tweet.fields', 'created_at,lang,public_metrics,possibly_sensitive,author_id')
+    url.searchParams.set('expansions', 'author_id')
+    url.searchParams.set('user.fields', 'username,verified,verified_type,public_metrics,created_at,protected,name')
 
     const twRes = await fetch(url, { headers: { Authorization: `Bearer ${twitterBearer}` } })
     const twText = await twRes.text()
@@ -58,13 +78,33 @@ Deno.serve(async (req) => {
         text: string
         created_at: string
         lang?: string
+        author_id: string
         possibly_sensitive?: boolean
         public_metrics?: { retweet_count: number; reply_count: number; like_count: number; quote_count: number }
       }>
+      includes?: { users?: TwUser[] }
       meta?: { newest_id?: string }
     }
 
-    const tweets = tw.data ?? []
+    // Map users
+    const users = new Map<string, TwUser>((tw.includes?.users ?? []).map(u => [u.id, u]))
+
+    // Verify/allowlist filter
+    const minFollowers = 10000
+    const isTrustedAuthor = (u: TwUser): boolean => {
+      const uname = (u.username || '').toLowerCase()
+      if (allow.has(uname)) return true
+      const verified = Boolean(u.verified) || (!!u.verified_type && u.verified_type.toLowerCase() !== 'none')
+      const followers = u.public_metrics?.followers_count ?? 0
+      const ageDays = u.created_at ? Math.floor((Date.now() - new Date(u.created_at).getTime()) / (1000*60*60*24)) : 0
+      const pub = !u.protected
+      return verified && followers >= minFollowers && ageDays >= 180 && pub
+    }
+
+    let tweets = (tw.data ?? []).filter(t => {
+      const u = users.get(t.author_id)
+      return !!u && isTrustedAuthor(u)
+    })
     if (tweets.length === 0) {
       await supabase.from('market_sentiment_state').upsert({ symbol: sym, last_run_at: new Date().toISOString(), since_id: tw.meta?.newest_id ?? since_id ?? null })
       return json({ symbol: sym, fetched: 0, analyzed: 0, inserted: 0, updated: 0 }, 200)
@@ -100,12 +140,13 @@ Deno.serve(async (req) => {
     for (const t of tweets) {
       const r = results.find(x => x.id === t.id)
       if (!r) continue
+      const u = users.get(t.author_id)
       const row = {
         symbol: sym,
         tweet_id: t.id,
         tweet_text: t.text,
         tweet_created_at: t.created_at,
-        author_id: null as string | null,
+        author_id: u?.id ?? null,
         lang: t.lang ?? null,
         retweet_count: t.public_metrics?.retweet_count ?? 0,
         reply_count: t.public_metrics?.reply_count ?? 0,
