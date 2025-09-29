@@ -107,10 +107,26 @@ const Market = () => {
     setSentimentLoading(true);
     setSentimentError(null);
     try {
-      const { error } = await supabase.functions.invoke("analyze-market-sentiments", {
+      const { data, error } = await supabase.functions.invoke("analyze-market-sentiments", {
         body: { symbol: sentimentSymbol.toUpperCase(), max: 20 },
       });
-      if (error) throw error;
+      if (error) {
+        // Enrich error message to include status/name to make debugging easier
+        const status = (error as any)?.status ?? '';
+        const name = (error as any)?.name ?? 'FunctionError';
+        const msg = (error as any)?.message ?? String(error);
+        const details = (error as any)?.context?.body ? ` | details: ${JSON.stringify((error as any).context.body).slice(0, 500)}` : '';
+        throw new Error(`${name}${status ? ` ${status}` : ''}: ${msg}${details}`);
+      }
+      // Optional: log summary for diagnostics
+      if (data) {
+        console.log("analyze-market-sentiments result", data);
+        // If server skipped due to cooldown or rate limit, surface a friendly info message
+        if ((data as any).skipped) {
+          const msg = (data as any).message || 'Skipping analysis for now. Using your last saved results.';
+          setSentimentError(msg);
+        }
+      }
       await loadSentiments(sentimentSymbol);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

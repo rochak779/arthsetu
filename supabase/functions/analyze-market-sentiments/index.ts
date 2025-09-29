@@ -1,8 +1,26 @@
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+// @ts-ignore - Resolved by Deno at runtime; types not needed in Node tooling
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Local type shim for editors/linters; Supabase Edge runtime provides Deno at runtime.
+declare const Deno: {
+  env: { get(name: string): string | undefined }
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void
+}
+
+// Dynamic CORS helper: echo Origin and Access-Control-Request-Headers so
+// clients (including supabase-js) can send x-client-info/apikey, etc.
+function buildCorsHeaders(req: Request, extra?: HeadersInit) {
+  const origin = req.headers.get('origin') ?? '*'
+  const acrh = req.headers.get('access-control-request-headers') ?? 'authorization,content-type,apikey,x-client-info'
+  const h = new Headers(extra ?? {})
+  h.set('access-control-allow-origin', origin)
+  h.set('access-control-allow-methods', 'POST, OPTIONS')
+  h.set('access-control-allow-headers', acrh)
+  h.set('access-control-max-age', '600')
+  const prevVary = h.get('vary')
+  h.set('vary', prevVary ? `${prevVary}, origin, access-control-request-headers` : 'origin, access-control-request-headers')
+  return h
 }
 
 type HFLabel = 'positive' | 'neutral' | 'negative'
@@ -19,11 +37,17 @@ type TwUser = {
 
 type ReqBody = { symbol: string; max?: number }
 
-Deno.serve(async (req) => {
+// Per-symbol cooldown (ms). Default 3 minutes. Can be overridden via env SENTIMENT_TTL_MS.
+const TTL_MS = Number((globalThis as any)?.Deno?.env?.get('SENTIMENT_TTL_MS') ?? '180000')
+
+Deno.serve(async (req: Request) => {
+  // Preflight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+    return new Response(null, { status: 204, headers: buildCorsHeaders(req) })
   }
 
+  const reqId = crypto.randomUUID().slice(0, 8)
+  const started = Date.now()
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -35,34 +59,58 @@ Deno.serve(async (req) => {
 
     // Require auth
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return json({ error: 'unauthorized' }, 401)
+    if (!authHeader) {
+      console.warn(`[analyze][${reqId}] missing auth header`)
+      return json(req, { error: 'unauthorized' }, 401)
+    }
 
-    const { symbol, max = 25 } = (await req.json().catch(() => ({}))) as ReqBody
-    if (!symbol) return json({ error: 'symbol_required' }, 400)
+    const bodyText = await req.text()
+    console.log(`[analyze][${reqId}] start`, { hasAuth: true, len: bodyText.length })
+    const { symbol, max = 25 } = (bodyText ? JSON.parse(bodyText) : ({} as ReqBody)) as ReqBody
+    if (!symbol) return json(req, { error: 'symbol_required', message: 'Please provide a stock symbol (e.g., HDFCBANK).' }, 400)
     const sym = String(symbol).toUpperCase().trim()
     const cap = clamp(Number(max), 1, 50)
 
-    // State
+    // State (includes last_run_at to enforce cooldown)
     const { data: state } = await supabase
       .from('market_sentiment_state')
-      .select('since_id')
+      .select('since_id,last_run_at')
       .eq('symbol', sym)
       .maybeSingle()
     const since_id = state?.since_id ?? undefined
+
+    // Cooldown: skip if we ran too recently
+    if (state?.last_run_at) {
+      const last = new Date(state.last_run_at).getTime()
+      const age = Date.now() - last
+      if (age < TTL_MS) {
+        const nextAllowedAt = new Date(last + TTL_MS).toISOString()
+        console.log(`[analyze][${reqId}] cooldown skip for ${sym}`, { ageMs: age, ttlMs: TTL_MS })
+        return json(req, {
+          symbol: sym,
+          skipped: true,
+          reason: 'cooldown',
+          nextAllowedAt,
+          message: `Please wait a bit. You can analyze ${sym} again after ${new Date(last + TTL_MS).toLocaleTimeString()}.`,
+          stale: true,
+        }, 200)
+      }
+    }
 
     // Load trusted allowlist for this symbol
     const { data: trusted } = await supabase
       .from('trusted_accounts')
       .select('handle')
       .contains('symbols', [sym])
-    const allow = new Set((trusted ?? []).map(r => String((r as any).handle).toLowerCase()))
+    const allow = new Set((trusted ?? []).map((r: { handle: string }) => String(r.handle).toLowerCase()))
 
     // Twitter search recent with author expansion
     const fromClause = allow.size > 0 ? ` (${Array.from(allow).slice(0,20).map(h => `from:${h}`).join(' OR ')})` : ''
     const query = `${sym} -is:retweet -is:reply${fromClause}`
     const url = new URL('https://api.twitter.com/2/tweets/search/recent')
     url.searchParams.set('query', query)
-    url.searchParams.set('max_results', String(clamp(cap, 10, 50)))
+  // Reduce request size to conserve rate limits
+  url.searchParams.set('max_results', String(clamp(cap, 10, 20)))
     url.searchParams.set('sort_order', 'recency')
     if (since_id) url.searchParams.set('since_id', since_id)
     url.searchParams.set('tweet.fields', 'created_at,lang,public_metrics,possibly_sensitive,author_id')
@@ -71,7 +119,47 @@ Deno.serve(async (req) => {
 
     const twRes = await fetch(url, { headers: { Authorization: `Bearer ${twitterBearer}` } })
     const twText = await twRes.text()
-    if (!twRes.ok) return json({ error: 'twitter_fetch_failed', status: twRes.status, details: twText }, 502)
+    if (!twRes.ok) {
+      // Inspect rate-limit headers and apply soft backoff
+      const rate = {
+        limit: twRes.headers.get('x-rate-limit-limit'),
+        remaining: twRes.headers.get('x-rate-limit-remaining'),
+        reset: twRes.headers.get('x-rate-limit-reset'),
+        retryAfter: twRes.headers.get('retry-after'),
+      }
+      console.warn(`[analyze][${reqId}] twitter_fetch_failed`, { status: twRes.status, ...rate, len: twText.length })
+
+      if (twRes.status === 429) {
+        const retryAfterSec = Number(rate.retryAfter ?? '0') || 60
+        // Mark last_run_at to throttle subsequent calls
+        await supabase.from('market_sentiment_state').upsert({
+          symbol: sym,
+          last_run_at: new Date().toISOString(),
+          since_id: since_id ?? null,
+        })
+        return json(req, {
+          symbol: sym,
+          skipped: true,
+          reason: 'rate_limited',
+          retryAfterSec,
+          rate,
+          message: `Twitter rate limit hit. Please try again in about ${Math.ceil(retryAfterSec / 60)} minute(s).`,
+          stale: true,
+          details: twText,
+        }, 200)
+      }
+
+      // Other Twitter errors: return soft skip and serve stale
+      return json(req, {
+        symbol: sym,
+        skipped: true,
+        reason: 'twitter_error',
+        status: twRes.status,
+        message: 'Unable to fetch latest tweets right now. Showing your last saved results.',
+        stale: true,
+        details: twText,
+      }, 200)
+    }
     const tw = JSON.parse(twText) as {
       data?: Array<{
         id: string
@@ -107,7 +195,8 @@ Deno.serve(async (req) => {
     })
     if (tweets.length === 0) {
       await supabase.from('market_sentiment_state').upsert({ symbol: sym, last_run_at: new Date().toISOString(), since_id: tw.meta?.newest_id ?? since_id ?? null })
-      return json({ symbol: sym, fetched: 0, analyzed: 0, inserted: 0, updated: 0 }, 200)
+      console.log(`[analyze][${reqId}] no tweets after filters for ${sym}`)
+      return json(req, { symbol: sym, fetched: 0, analyzed: 0, inserted: 0, updated: 0 }, 200)
     }
 
     // Batch to HF
@@ -122,7 +211,10 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ inputs: input, options: { wait_for_model: true } })
       })
       const bodyText = await hfRes.text()
-      if (!hfRes.ok) return json({ error: 'hf_inference_failed', status: hfRes.status, details: bodyText }, 502)
+      if (!hfRes.ok) {
+        console.warn(`[analyze][${reqId}] hf_inference_failed`, { status: hfRes.status, len: bodyText.length })
+        return json(req, { error: 'hf_inference_failed', status: hfRes.status, details: bodyText }, 502)
+      }
       const pred = JSON.parse(bodyText) as Array<Array<{ label: string; score: number }>> | Array<{ label: string; score: number }>
       const normalized: Array<Array<{ label: string; score: number }>> = Array.isArray(pred[0]) ? pred as any : [pred as any]
       normalized.forEach((choices, idx) => {
@@ -165,17 +257,23 @@ Deno.serve(async (req) => {
       else updated++
     }
 
-    await supabase.from('market_sentiment_state').upsert({ symbol: sym, since_id: tw.meta?.newest_id ?? since_id ?? null, last_run_at: new Date().toISOString() })
+  await supabase.from('market_sentiment_state').upsert({ symbol: sym, since_id: tw.meta?.newest_id ?? since_id ?? null, last_run_at: new Date().toISOString() })
 
-    return json({ symbol: sym, fetched: tweets.length, analyzed: results.length, inserted, updated, model: hfModel })
+    const ms = Date.now() - started
+    console.log(`[analyze][${reqId}] done in ${ms}ms`, { symbol: sym, fetched: tweets.length, analyzed: results.length, inserted, updated })
+    return json(req, { symbol: sym, fetched: tweets.length, analyzed: results.length, inserted, updated, model: hfModel })
   } catch (e) {
+    const ms = Date.now() - started
     const msg = e instanceof Error ? e.message : String(e)
-    return json({ error: 'unexpected', details: msg }, 500)
+    console.error(`[analyze][${reqId}] error after ${ms}ms`, msg)
+    return json(req, { error: 'analyze_failed', details: msg }, 502)
   }
 })
 
-function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, 'content-type': 'application/json' } })
+function json(req: Request | null, data: unknown, status = 200) {
+  const base = { 'content-type': 'application/json' } as HeadersInit
+  const headers = req ? buildCorsHeaders(req, base) : new Headers(base)
+  return new Response(JSON.stringify(data), { status, headers })
 }
 function clamp(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)) }
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)) }
