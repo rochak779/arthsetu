@@ -7,9 +7,11 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts"
 import { usePortfolioData } from "@/hooks/usePortfolioData";
 import { format } from "date-fns";
 import logo from "@/assets/logo007.svg";
+import { useNavigate } from "react-router-dom";
 
 const Portfolio = () => {
   const { portfolioData, isLoading, isRefreshing, refreshPortfolio } = usePortfolioData();
+  const navigate = useNavigate();
 
   const handleBuyTrim = () => {
     window.open('https://kite.zerodha.com/', '_blank');
@@ -137,34 +139,52 @@ const Portfolio = () => {
             <Card className="bg-card border-border">
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4">Portfolio Performance</h3>
-                <div className="h-48">
-                  <LineChart width={300} height={180} data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <YAxis 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                    />
-                    <Tooltip 
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "6px"
-                      }}
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </div>
+                {portfolioData.holdings.length === 0 ? (
+                  <div className="h-48 flex items-center justify-center">
+                    <div className="text-center">
+                      <p className="text-muted-foreground mb-2">No portfolio data available</p>
+                      <p className="text-sm text-muted-foreground">
+                        Connect your trading account to start tracking your portfolio performance
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={() => navigate('/integration')}
+                      >
+                        Connect Account
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-48">
+                    <LineChart width={300} height={180} data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={12}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "6px"
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

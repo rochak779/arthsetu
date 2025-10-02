@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import BottomTabBar from "@/components/BottomTabBar";
-import { User, LogOut } from "lucide-react";
+import { User, LogOut, History } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -248,6 +248,26 @@ const Settings = () => {
             </CardContent>
           </Card>
         )}
+
+        {/* Alerts History Section */}
+        <Card className="bg-card border-border mb-6">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Alerts History</h3>
+                <p className="text-sm text-muted-foreground mt-1">View your read alerts</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                className="text-primary hover:text-primary h-auto p-2"
+                onClick={() => navigate('/alerts-history')}
+              >
+                <History className="h-5 w-5 mr-2" />
+                View
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Connections Section */}
         <Card className="bg-card border-border mb-24">

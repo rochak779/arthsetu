@@ -22,6 +22,7 @@ import KiteCallback from "./pages/KiteCallback";
 import Education from "./pages/Education";
 import EducationCategory from "./pages/EducationCategory";
 import EducationLesson from "./pages/EducationLesson";
+import AlertsHistory from "./pages/AlertsHistory";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
           <Route path="/education/category/:categoryId" element={<EducationCategory />} />
           <Route path="/education/lesson/:lessonId" element={<EducationLesson />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/alerts-history" element={<AlertsHistory />} />
           <Route path="/alert/:id" element={<AlertDetails />} />
           <Route path="/oauth/kite/callback" element={<KiteCallback />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
