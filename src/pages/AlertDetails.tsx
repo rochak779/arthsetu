@@ -1,11 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, ExternalLink, TrendingUp } from "lucide-react";
+import { ArrowLeft, ExternalLink, TrendingUp, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AlertRecord, markAlertRead, archiveAlert } from "@/hooks/useAlerts";
 import { useToast } from "@/hooks/use-toast";
+import { useStockQuote } from "@/hooks/useStockQuote";
 
 const AlertDetails = () => {
   const { id } = useParams();
@@ -14,6 +15,9 @@ const AlertDetails = () => {
   const [record, setRecord] = useState<AlertRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Fetch real-time stock quote
+  const { quote, loading: quoteLoading, refetch } = useStockQuote(record?.symbol || null);
 
   useEffect(() => {
     let mounted = true;
@@ -66,8 +70,20 @@ const AlertDetails = () => {
     }
   };
 
-  const priceText = useMemo(() => record?.last_price != null ? `₹${record.last_price}` : "—", [record]);
-  const changeText = useMemo(() => record?.change_pct != null ? `${record.change_pct > 0 ? "+" : ""}${record.change_pct}%` : "—", [record]);
+  // Use real-time data if available, otherwise fall back to alert data
+  const priceText = useMemo(() => {
+    if (quote?.lastPrice != null) return `₹${quote.lastPrice.toFixed(2)}`;
+    if (record?.last_price != null) return `₹${record.last_price}`;
+    return "—";
+  }, [quote, record]);
+
+  const changeText = useMemo(() => {
+    if (quote?.pChange != null) return `${quote.pChange > 0 ? "+" : ""}${quote.pChange.toFixed(2)}%`;
+    if (record?.change_pct != null) return `${record.change_pct > 0 ? "+" : ""}${record.change_pct}%`;
+    return "—";
+  }, [quote, record]);
+
+  const isLiveData = quote != null;
 
   const onMarkRead = async () => {
     if (!record) return;
@@ -113,15 +129,40 @@ const AlertDetails = () => {
           {/* Stock Info */}
           <Card className="bg-card border-border">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-3">
                 <div>
                   <h2 className="text-2xl font-bold text-foreground">{record?.symbol ?? record?.title ?? "Alert"}</h2>
                   <p className="text-lg text-muted-foreground">{priceText}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-semibold text-primary">{changeText}</p>
+                  <p className={`text-lg font-semibold ${quote?.pChange && quote.pChange > 0 ? 'text-primary' : quote?.pChange && quote.pChange < 0 ? 'text-destructive' : 'text-foreground'}`}>
+                    {changeText}
+                  </p>
                   <p className="text-sm text-muted-foreground">Today</p>
                 </div>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <div className="flex items-center gap-2">
+                  {isLiveData ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-primary">
+                      <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                      Live
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      As of {record?.created_at ? new Date(record.created_at).toLocaleDateString() : '—'}
+                    </span>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={refetch}
+                  disabled={quoteLoading}
+                  className="h-8 px-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${quoteLoading ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
             </CardContent>
           </Card>
