@@ -1,73 +1,137 @@
-# Welcome to your Lovable project
+# 🚀 ArthSetu — AI-Powered Portfolio Partner for Indian Investors
 
-## Project info
+**ArthSetu** is an AI-powered portfolio management and intelligence platform designed to help Indian retail investors make smarter, more confident investment decisions — without relying on random tips or fragmented apps.
 
-**URL**: https://lovable.dev/projects/30f73f57-e7fa-43a5-9d04-2261eca4281c
+> **Our belief:** Money should work for you — not the other way around.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## 🧩 Problem Statement
 
-**Use Lovable**
+Investing in India today is **broken and fragmented**:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/30f73f57-e7fa-43a5-9d04-2261eca4281c) and start prompting.
+- Investors use **multiple apps** for stocks, mutual funds, news, and brokers  
+- Market news is **generic**, noisy, and rarely relevant to one’s actual portfolio  
+- Most retail investors end up **following someone else’s advice** — finfluencers, friends, or WhatsApp tips  
+- Even when good advice exists, **execution is disconnected** and slow  
 
-Changes made via Lovable will be committed automatically to this repo.
+This leads to:
+- Confusion and decision fatigue  
+- Missed opportunities and delayed actions  
+- Low confidence, especially among Tier 2 and Tier 3 investors  
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 💡 Our Solution — ArthSetu
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+**ArthSetu** acts as a **personal AI portfolio partner** that unifies the entire investment journey — from **understanding → insight → action**.
 
-Follow these steps:
+It connects to a user’s investments, continuously monitors market events, and uses AI to deliver **portfolio-specific alerts, explanations, and recommendations** in simple language — even via **voice conversations**.
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 🧠 How ArthSetu Works
 
-# Step 3: Install the necessary dependencies.
-npm i
+ArthSetu follows a **Sense → Reason → Act** architecture:
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### 1️⃣ Sense
+- Imports holdings from brokers, mutual funds, CSVs, or APIs  
+- Tracks prices, news, filings, and market events in real time  
 
-**Edit a file directly in GitHub**
+### 2️⃣ Reason
+- Maps events to the user’s portfolio  
+- Classifies them as **risks or opportunities**  
+- Scores impact and urgency using AI + rule-based logic  
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 3️⃣ Act
+- Recommends clear actions: *hold, add, trim, switch*  
+- Enables **one-tap execution** via broker integration  
+- Allows intelligent snoozing and learning over time  
 
-**Use GitHub Codespaces**
+---
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🌟 Key Features
 
-## What technologies are used for this project?
+### 🎙️ Voice Agent
+- Ask natural questions like:
+  - *“What’s my total portfolio value?”*
+  - *“Any alerts today?”*
+- Get instant, personalized answers
 
-This project is built with:
+### 🔔 AI-Generated Alerts
+- Portfolio-specific alerts for risks and opportunities  
+- No generic noise — only what matters to *you*
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 📚 AI Learning Module
+- Personalized education that adapts to:
+  - User’s portfolio  
+  - Risk profile  
+  - Learning behavior  
+- Helps users become better investors over time
 
-## How can I deploy this project?
+### 🔗 Seamless Execution
+- Connect brokers  
+- Buy and sell directly from ArthSetu  
+- Reduce friction between insight and action  
 
-Simply open [Lovable](https://lovable.dev/projects/30f73f57-e7fa-43a5-9d04-2261eca4281c) and click on Share -> Publish.
+---
 
-## Can I connect a custom domain to my Lovable project?
+## ⚙️ Additional Features
 
-Yes, you can!
+- Multi-broker portfolio tracking  
+- Audio notes and summaries  
+- Daily digest via **WhatsApp & Email**  
+- Critical alerts for immediate action  
+- Unified dashboard for performance and risk insights  
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 🎯 Target Users
+
+- Self-directed Indian retail investors  
+- Multi-asset holders (stocks, mutual funds, ETFs)  
+- Time-constrained professionals  
+- First-time and Tier 2 / Tier 3 market participants  
+
+---
+
+## 🛠️ Tech Stack (Hackathon Version – Example)
+
+- **Frontend:** React / Next.js  
+- **Backend:** Node.js / Python (FastAPI)  
+- **AI / ML:** Large Language Models (LLMs) for reasoning & voice interaction  
+- **Data Sources:** Market APIs, broker APIs, news feeds  
+- **Notifications:** WhatsApp, Email  
+- **Infrastructure:** Cloud-based, API-first architecture  
+
+---
+
+## 🚧 Project Status
+
+This project is currently being built as part of a **hackathon**.
+
+Core focus areas:
+- Portfolio ingestion & mapping  
+- AI-driven alerting and reasoning  
+- Voice-based interaction  
+
+---
+
+## 🌱 Vision
+
+ArthSetu aims to become the **financial operating system** for Indian retail investors —  
+where every investment decision is:
+- **Contextual**  
+- **Explainable**  
+- **Actionable**
+
+Not just another app — but a trusted partner for your money.
+
+---
+
+## 🤝 Team ArthSetu
+
+Built with ❤️ by a team passionate about:
+- Financial inclusion  
+- AI-driven decision making  
+- Simplifying investing for millions of Indians  
