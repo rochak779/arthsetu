@@ -1,137 +1,31 @@
-# 🚀 ArthSetu — AI-Powered Portfolio Partner for Indian Investors
+# ArthSetu
 
-**ArthSetu** is an AI-powered portfolio management and intelligence platform designed to help Indian retail investors make smarter, more confident investment decisions — without relying on random tips or fragmented apps.
+**A portfolio-aware investing assistant for Indian retail investors: alerts about the news that affects your holdings, explained in plain language, and a voice agent you can ask about your portfolio.**
 
-> **Our belief:** Money should work for you — not the other way around.
+Hackathon prototype built with a team. Not deployed.
 
----
+![ArthSetu onboarding screen](docs/readme/screenshot.png)
 
-## 🧩 Problem Statement
+## The problem
 
-Investing in India today is **broken and fragmented**:
+Indian retail investors spread their money across several apps for stocks, mutual funds, news and brokers. Market news is generic and rarely says what it means for the holdings they actually own. So many end up following tips from friends, finfluencers or WhatsApp groups, which leaves them with low confidence and slow, disconnected decisions. This is especially true for first-time investors outside the big cities.
 
-- Investors use **multiple apps** for stocks, mutual funds, news, and brokers  
-- Market news is **generic**, noisy, and rarely relevant to one’s actual portfolio  
-- Most retail investors end up **following someone else’s advice** — finfluencers, friends, or WhatsApp tips  
-- Even when good advice exists, **execution is disconnected** and slow  
+## What it does
 
-This leads to:
-- Confusion and decision fatigue  
-- Missed opportunities and delayed actions  
-- Low confidence, especially among Tier 2 and Tier 3 investors  
+- **Imports holdings** from a Zerodha (Kite) account.
+- **Tracks prices and market news** and maps events to the user's own holdings.
+- **Raises portfolio-specific alerts,** framed as a risk or an opportunity, with an alert history.
+- **A voice agent** that answers questions like "What's my portfolio worth?" or "Any alerts today?"
+- **Learning content** organised by category, to help investors build confidence over time.
 
----
+<details>
+<summary><strong>Tech stack & running locally</strong></summary>
 
-## 💡 Our Solution — ArthSetu
+**Stack:** React, TypeScript, Vite, Tailwind CSS with shadcn/ui, Supabase (Auth, Postgres, Edge Functions), Zerodha Kite Connect, NSE market data, ElevenLabs voice agent.
 
-**ArthSetu** acts as a **personal AI portfolio partner** that unifies the entire investment journey — from **understanding → insight → action**.
+```bash
+npm install
+npm run dev
+```
 
-It connects to a user’s investments, continuously monitors market events, and uses AI to deliver **portfolio-specific alerts, explanations, and recommendations** in simple language — even via **voice conversations**.
-
----
-
-## 🧠 How ArthSetu Works
-
-ArthSetu follows a **Sense → Reason → Act** architecture:
-
-### 1️⃣ Sense
-- Imports holdings from brokers, mutual funds, CSVs, or APIs  
-- Tracks prices, news, filings, and market events in real time  
-
-### 2️⃣ Reason
-- Maps events to the user’s portfolio  
-- Classifies them as **risks or opportunities**  
-- Scores impact and urgency using AI + rule-based logic  
-
-### 3️⃣ Act
-- Recommends clear actions: *hold, add, trim, switch*  
-- Enables **one-tap execution** via broker integration  
-- Allows intelligent snoozing and learning over time  
-
----
-
-## 🌟 Key Features
-
-### 🎙️ Voice Agent
-- Ask natural questions like:
-  - *“What’s my total portfolio value?”*
-  - *“Any alerts today?”*
-- Get instant, personalized answers
-
-### 🔔 AI-Generated Alerts
-- Portfolio-specific alerts for risks and opportunities  
-- No generic noise — only what matters to *you*
-
-### 📚 AI Learning Module
-- Personalized education that adapts to:
-  - User’s portfolio  
-  - Risk profile  
-  - Learning behavior  
-- Helps users become better investors over time
-
-### 🔗 Seamless Execution
-- Connect brokers  
-- Buy and sell directly from ArthSetu  
-- Reduce friction between insight and action  
-
----
-
-## ⚙️ Additional Features
-
-- Multi-broker portfolio tracking  
-- Audio notes and summaries  
-- Daily digest via **WhatsApp & Email**  
-- Critical alerts for immediate action  
-- Unified dashboard for performance and risk insights  
-
----
-
-## 🎯 Target Users
-
-- Self-directed Indian retail investors  
-- Multi-asset holders (stocks, mutual funds, ETFs)  
-- Time-constrained professionals  
-- First-time and Tier 2 / Tier 3 market participants  
-
----
-
-## 🛠️ Tech Stack (Hackathon Version – Example)
-
-- **Frontend:** React / Next.js  
-- **Backend:** Node.js / Python (FastAPI)  
-- **AI / ML:** Large Language Models (LLMs) for reasoning & voice interaction  
-- **Data Sources:** Market APIs, broker APIs, news feeds  
-- **Notifications:** WhatsApp, Email  
-- **Infrastructure:** Cloud-based, API-first architecture  
-
----
-
-## 🚧 Project Status
-
-This project is currently being built as part of a **hackathon**.
-
-Core focus areas:
-- Portfolio ingestion & mapping  
-- AI-driven alerting and reasoning  
-- Voice-based interaction  
-
----
-
-## 🌱 Vision
-
-ArthSetu aims to become the **financial operating system** for Indian retail investors —  
-where every investment decision is:
-- **Contextual**  
-- **Explainable**  
-- **Actionable**
-
-Not just another app — but a trusted partner for your money.
-
----
-
-## 🤝 Team ArthSetu
-
-Built with ❤️ by a team passionate about:
-- Financial inclusion  
-- AI-driven decision making  
-- Simplifying investing for millions of Indians  
+</details>
