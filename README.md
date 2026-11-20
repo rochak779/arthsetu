@@ -29,3 +29,7 @@ npm run dev
 ```
 
 </details>
+
+---
+
+Built by [Rochak Agarwal](https://www.rochakagarwal.com). More of my work is at [rochakagarwal.com](https://www.rochakagarwal.com).
